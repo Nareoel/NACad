@@ -6,6 +6,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 
 #include "ShaderProgram.h"
 #include "Mesh.h"
@@ -27,6 +30,15 @@ void lightsInputkeyCallback(GLFWwindow* window, int key, int scancode, int actio
 // catch mouse callbacks
 void mouseCallback(GLFWwindow* window, double xPos, double yPos);
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+
+// Initialize ImGui
+void SetupImGui(GLFWwindow* window);
+
+// Cleanup ImGui
+void CleanupImGui();
+
+// Draw ImGui frame
+void RenderImGui();
 
 // ToDo remove global variables
 Camera camera;
@@ -55,6 +67,7 @@ int main() {
 
     // window creation
     GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -115,6 +128,7 @@ int main() {
     glfwSetScrollCallback(window, scrollCallback);
 
     glfwSetKeyCallback(window, lightsInputkeyCallback);
+    SetupImGui(window);
     while (!glfwWindowShouldClose(window)) {
         // catch key released callbacks
         processInput(window);
@@ -178,12 +192,15 @@ int main() {
 
         backpackModel.draw(*shaderProgram);
 
+        RenderImGui();
+
         // swap front and back buffers
         glfwSwapBuffers(window);
         // check if any event triggered, like keyboard pressed or mose movement
         glfwPollEvents();
     }
 
+    CleanupImGui();
     // glfw: terminate, clearing all previously allocated GLFW resources.
     glfwTerminate();
     return 0;
@@ -259,4 +276,36 @@ void scrollCallback(GLFWwindow* window, double, double yOffset) {
         return;
     }
     camera.processScroll(yOffset);
+}
+
+void SetupImGui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+void CleanupImGui() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
+
+void RenderImGui() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Example window
+    ImGui::Begin("Hello, world!");
+    ImGui::Text("This is a simple window!");
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

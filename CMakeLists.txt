@@ -71,7 +71,31 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# --- ImGui setup ---
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.92.0
+)
+FetchContent_MakeAvailable(imgui)
+
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
 find_package(OpenGL REQUIRED)
+
+target_link_libraries(imgui PUBLIC glfw ${OPENGL_LIBRARIES})
 
 # -----------------------------------------------------------
 # Project sources
@@ -99,6 +123,7 @@ target_link_libraries(${PROJECT_NAME}
     glfw
     assimp
     glm
+    imgui
     ${OPENGL_LIBRARIES}
 )
 
@@ -137,3 +162,4 @@ add_custom_command(
 # -----------------------------------------------------------
 message(STATUS "All dependencies fetched, built as shared libs, and linked successfully!")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "ImGui source directory: ${imgui_SOURCE_DIR}")

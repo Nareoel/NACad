@@ -56,6 +56,8 @@ glm::vec3 defualtPointLightColor = defaultGlobalLightColor;  // glm::vec3(0.8906
 bool spotLightOn{true};
 glm::vec3 defualtSpotLightColor = glm::vec3(1.0f, 1.0f, 1.f);
 
+bool interactiveMode{false};
+
 const int cPointLightsNumber{4};
 
 int main() {
@@ -66,7 +68,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // window creation
-    GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1600, 1200, "LearnOpenGL", NULL, NULL);
 
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -133,6 +135,13 @@ int main() {
         // catch key released callbacks
         processInput(window);
 
+        if (interactiveMode) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetCursorPosCallback(window, nullptr);
+        } else {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetCursorPosCallback(window, mouseCallback);
+        }
         // --------------- actual render here
         // set some color. This color will be setted each time we call glClear
         // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -219,6 +228,9 @@ void lightsInputkeyCallback(GLFWwindow* window, int key, int scancode, int actio
         }
         if (key == GLFW_KEY_Q) {
             spotLightOn = !spotLightOn;
+        }
+        if (key == GLFW_KEY_I) {
+            interactiveMode = !interactiveMode;
         }
     }
 }

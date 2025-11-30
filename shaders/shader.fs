@@ -1,15 +1,16 @@
 #version 330 core
+#extension GL_ARB_gpu_shader5 : enable
 
 struct Material{
     vec3 color;
 
-    sampler2D diffuse[16];
+    sampler2D diffuse[8];
     int diffuseTexturesNumber;
 
-    sampler2D specular[16];
+    sampler2D specular[8];
     int specularTexturesNumber;
 
-    sampler2D emission[16];
+    sampler2D emission[8];
     int emissionTexturesNumber;
 
     float shininess;

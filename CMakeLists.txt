@@ -11,20 +11,19 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# --- Optional: separate output folders ---
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin/Debug)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/Release)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib/Debug)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib/Release)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib/Debug)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib/Release)
-
 include(FetchContent)
+
+# --- Optional: separate output folders ---
+set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/externals)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # -----------------------------------------------------------
 # Dependencies
@@ -35,7 +34,9 @@ FetchContent_Declare(
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
     GIT_TAG v0.1.36
-)
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glad-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glad-build"
+) 
 FetchContent_MakeAvailable(glad)
 
 # --- GLFW ---
@@ -43,6 +44,8 @@ FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.4
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glfw-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glfw-build"
 )
 FetchContent_MakeAvailable(glfw)
 
@@ -51,6 +54,8 @@ FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG 1.0.1
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glm-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glm-build"
 )
 FetchContent_MakeAvailable(glm)
 
@@ -59,6 +64,8 @@ FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
     GIT_TAG v5.3.1
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/assimp-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/assimp-build"
 )
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
@@ -68,6 +75,8 @@ FetchContent_MakeAvailable(assimp)
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/stb-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/stb-build"
 )
 FetchContent_MakeAvailable(stb)
 
@@ -76,6 +85,8 @@ FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.92.0
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/imgui-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/imgui-build"
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -97,6 +108,16 @@ find_package(OpenGL REQUIRED)
 
 target_link_libraries(imgui PUBLIC glfw ${OPENGL_LIBRARIES})
 
+# --- native file dialog extended ---
+FetchContent_Declare(
+    nfd
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG v1.2.1
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/nfd-src"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/nfd-build"
+)
+FetchContent_MakeAvailable(nfd)
+
 # -----------------------------------------------------------
 # Project sources
 # -----------------------------------------------------------
@@ -112,6 +133,7 @@ add_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${stb_SOURCE_DIR}
+    ${nfd_SOURCE_DIR}/include
 )
 
 # -----------------------------------------------------------
@@ -124,6 +146,7 @@ target_link_libraries(${PROJECT_NAME}
     assimp
     glm
     imgui
+    nfd
     ${OPENGL_LIBRARIES}
 )
 

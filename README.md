@@ -6,11 +6,11 @@ Inspired by https://learnopengl.com/
 Debug build
 
 ```console
-cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build
+cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug && cmake --build build/Debug
 ```
 
 Release build
 
 ```console
-cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release && cmake --build build/Release
 ```

@@ -13,11 +13,13 @@ class Model {
     void loadModel(const std::filesystem::path& file);
     void draw(ShaderProgram& shader) const;
 
+    using ImagesInfo = std::vector<std::pair<TextureType, std::filesystem::path>>;
+
    private:
-    std::vector<Mesh> meshes_;
     std::filesystem::path directory_;
-    std::unordered_map<std::filesystem::path, Texture> loadedTextures_;
+    std::unordered_map<std::unique_ptr<Mesh>, ImagesInfo> meshesAndImagesInfo_;
 
     void processNode_(aiNode* node, const aiScene* scene);
-    Mesh convertFromAiMesh_(aiMesh* mesh, const aiScene* scene);
+    void loadFromAiMesh_(aiMesh* mesh, const aiScene* scene);
+    void createTexturesAndSetMaterial_();
 };

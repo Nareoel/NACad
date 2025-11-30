@@ -2,39 +2,27 @@
 #include "Utils.h"
 
 #include <iostream>
+#include <ranges>
+#include <unordered_set>
 
 namespace {
 const glm::vec3 defaultColor(1.0f, 0.925f, 0.5568f);
+const std::unordered_map<aiTextureType, TextureType> cAiTextureTypeToOurTextureType{
+    {aiTextureType_DIFFUSE, TextureType::Diffuse},
+    {aiTextureType_SPECULAR, TextureType::Specular},
+    {aiTextureType_EMISSIVE, TextureType::Emission}};
 
-std::vector<Texture> sLoadTextureFromAssimpMaterial(
-    aiMaterial* material, const std::filesystem::path& dir,
-    std::unordered_map<std::filesystem::path, Texture>& preloadedTextures) {
-    std::vector<Texture> result;
+Model::ImagesInfo sLoadImagesInfoFromAssimpMaterial(aiMaterial* material, const std::filesystem::path& dir) {
+    Model::ImagesInfo result;
 
-    const std::vector<std::pair<aiTextureType, TextureType>> cNeededTextures{
-        {aiTextureType_DIFFUSE, TextureType::Diffuse},
-        {aiTextureType_SPECULAR, TextureType::Specular},
-        {aiTextureType_EMISSIVE, TextureType::Emission}};
-
-    for (const auto& [assimpType, ourType] : cNeededTextures) {
+    for (const auto& [assimpType, ourType] : cAiTextureTypeToOurTextureType) {
         for (size_t i = 0; i < material->GetTextureCount(assimpType); ++i) {
             aiString textureFileName;
             material->GetTexture(assimpType, i, &textureFileName);
             auto texturePath = dir / textureFileName.C_Str();
-            if (preloadedTextures.contains(texturePath)) {
-                result.emplace_back(preloadedTextures[texturePath]);
-            } else {
-                auto maybeTextureId = Utils::loadTexture(texturePath);
-                if (!maybeTextureId) {
-                    continue;
-                }
-                Texture texture{.id = *maybeTextureId, .type = ourType};
-                result.emplace_back(texture);
-                preloadedTextures[texturePath] = texture;
-            }
+            result.emplace_back(ourType, std::move(texturePath));
         }
     }
-
     return result;
 };
 
@@ -52,29 +40,29 @@ void Model::loadModel(const std::filesystem::path& filePath) {
     }
     directory_ = filePath.parent_path();
     processNode_(scene->mRootNode, scene);
+    createTexturesAndSetMaterial_();
     std::cout << "Reading model file finished: " << filePath << std::endl;
 }
 
 void Model::draw(ShaderProgram& shader) const {
-    for (const auto& mesh : meshes_) {
-        mesh.draw(shader);
+    for (const auto& mesh : meshesAndImagesInfo_ | std::views::keys) {
+        mesh->draw(shader);
     }
 }
 
 void Model::processNode_(aiNode* node, const aiScene* scene) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         auto* mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes_.push_back(convertFromAiMesh_(mesh, scene));
+        loadFromAiMesh_(mesh, scene);
     }
     for (size_t i = 0; i < node->mNumChildren; ++i) {
         processNode_(node->mChildren[i], scene);
     }
 }
 
-Mesh Model::convertFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
+void Model::loadFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
-    Material material;
 
     vertices.reserve(mesh->mNumVertices);
     for (size_t i = 0; i < mesh->mNumVertices; ++i) {
@@ -96,14 +84,37 @@ Mesh Model::convertFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
         }
     }
 
-    if (mesh->mMaterialIndex > 0) {
-        material.color = glm::vec3(0, 0, 0);
-        auto materials = scene->mMaterials[mesh->mMaterialIndex];
-        material.textures = sLoadTextureFromAssimpMaterial(materials, directory_, loadedTextures_);
-    }
-    if (material.textures.empty()) {
-        material.color = defaultColor;
-    }
+    auto ourMesh = std::make_unique<Mesh>(vertices, indices, Material{});
 
-    return Mesh(vertices, indices, material);
+    if (mesh->mMaterialIndex > 0) {
+        auto materials = scene->mMaterials[mesh->mMaterialIndex];
+        auto images = sLoadImagesInfoFromAssimpMaterial(materials, directory_);
+        meshesAndImagesInfo_.emplace(std::make_pair(std::move(ourMesh), images));
+    }
+}
+
+void Model::createTexturesAndSetMaterial_() {
+    std::unordered_set<std::filesystem::path> uniqueImages;
+    for (const auto& images : meshesAndImagesInfo_ | std::views::values | std::views::join) {
+        uniqueImages.insert(images.second);
+    }
+    const auto [textureId, textureLayersMap] = Utils::createTextureFromImages(uniqueImages);
+
+    for (auto& [mesh, imagesInfo] : meshesAndImagesInfo_) {
+        Material material;
+
+        std::unordered_map<TextureType, std::vector<TextureLayerIndex>> textures;
+        for (const auto& [textureType, imagePath] : imagesInfo) {
+            if (auto textureLayersIt = textureLayersMap.find(imagePath);
+                textureLayersIt != textureLayersMap.end()) {
+                textures[textureType].emplace_back(textureLayersIt->second);
+            }
+        }
+        if (textures.empty()) {
+            material.color = defaultColor;
+        } else {
+            material.textureData = TextureData{.id = textureId, .textures = std::move(textures)};
+        }
+        mesh->setMaterial(material);
+    }
 }

@@ -2,18 +2,22 @@
 
 #include <filesystem>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
 
 enum class TextureType { Diffuse, Specular, Emission };
 using TextureID = unsigned int;
-struct Texture {
+using TextureLayerIndex = int;
+
+struct TextureData {
     TextureID id;
-    TextureType type;
+    std::unordered_map<TextureType, std::vector<TextureLayerIndex>> textures;
 };
+
 struct Material {
     glm::vec3 color;
-    std::vector<Texture> textures;
+    std::optional<TextureData> textureData;
     float shininess = 32;
 };
 
@@ -71,6 +75,7 @@ class ShaderProgram {
     void setUniform(const std::string& varName, const glm::mat4& transform);
     void setUniform(const std::string& varName, const glm::vec3& color);
     void setUniform(const std::string& structName, const Material& material);
+    void clearMaterial(const std::string& structName);
     void setUniform(const std::string& structName, const GlobalLight& light);
     void setUniform(const std::string& structName, const SpotLight& light);
     void setUniform(const std::string& structName, const PointLight& light);

@@ -9,6 +9,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <nfd.h>
 
 #include "ShaderProgram.h"
 #include "Mesh.h"
@@ -60,6 +61,26 @@ bool interactiveMode{false};
 
 const int cPointLightsNumber{4};
 
+std::filesystem::path fileToRead;
+void openFileDialog() {
+    fileToRead.clear();
+    nfdchar_t* outPath = nullptr;
+
+    nfdopendialogu8args_t args = {0};
+    args.filterList;
+    args.filterCount = 0;
+    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+    if (result == NFD_OKAY) {
+        std::cout << "User selected: " << outPath << std::endl;
+        free(outPath);
+    } else if (result == NFD_CANCEL) {
+        std::cout << "User canceled." << std::endl;
+    } else {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+    fileToRead = outPath;
+}
+
 int main() {
     // GLFW initialization -- addon to OpenGL to manages windows
     glfwInit();
@@ -100,15 +121,20 @@ int main() {
 
     Material containerMaterial;
     {
-        if (auto diffuseMapId = Utils::loadTexture("samples/container.png")) {
-            containerMaterial.textures.emplace_back(Texture{*diffuseMapId, TextureType::Diffuse});
-        }
-        if (auto specularMapId = Utils::loadTexture("samples/containerMetalBorder.png")) {
-            containerMaterial.textures.emplace_back(Texture{*specularMapId, TextureType::Specular});
-        }
-        if (auto emissionMapId = Utils::loadTexture("samples/matrix.jpg")) {
-            containerMaterial.textures.emplace_back(Texture{*emissionMapId, TextureType::Emission});
-        }
+        std::unordered_set<std::filesystem::path> containerImages{
+            "samples/container.png",
+            "samples/containerMetalBorder.png",
+            "samples/matrix.jpg",
+        };
+        auto containerTextureInfo = Utils::createTextureFromImages(containerImages);
+        TextureData textureData;
+        textureData.id = containerTextureInfo.first;
+        textureData.textures = {
+            {TextureType::Diffuse, {containerTextureInfo.second["samples/container.png"]}},
+            {TextureType::Specular, {containerTextureInfo.second["samples/containerMetalBorder.png"]}},
+            {TextureType::Emission, {containerTextureInfo.second["samples/matrix.jpg"]}},
+        };
+        containerMaterial.textureData = std::move(textureData);
         containerMaterial.color = glm::vec3(0, 0, 0);
         containerMaterial.shininess = 1024;
     }
@@ -169,6 +195,7 @@ int main() {
                                                                    800.0f / 600.0f, 0.1f, 100.0f));
         shaderProgram->setUniform("time", float(glfwGetTime()));
 
+        // containers
         cubeMesh->setMaterial(containerMaterial);
         int cubeNumberXYPlane = 6;
         double positionRadius = 3;
@@ -181,12 +208,14 @@ int main() {
             cubeMesh->draw(*shaderProgram);
         }
 
+        // global light source
         cubeMesh->resetModelTr();
         cubeMesh->setModelTr(glm::translate(glm::mat4(1.0f), globalLight.position));
         lightSourceMaterial.color = globalLight.color;
         cubeMesh->setMaterial(lightSourceMaterial);
         cubeMesh->draw(*shaderProgram);
 
+        // point light sources
         cubeMesh->resetModelTr();
         cubeMesh->setLocalTr(glm::scale(glm::mat4(1.0f), glm::vec3(0.5f)));
         for (int i = 0; i < cPointLightsNumber; ++i) {
@@ -314,10 +343,13 @@ void RenderImGui() {
     ImGui::NewFrame();
 
     // Example window
-    ImGui::Begin("Hello, world!");
-    ImGui::Text("This is a simple window!");
-    ImGui::End();
-
+    // ImGui::Begin("Hello, world!");
+    // ImGui::Text("This is a simple window!");
+    if (ImGui::Button("Open File")) {
+        std::cout << "Button clicked!" << std::endl;
+        openFileDialog();
+    }
+    // ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

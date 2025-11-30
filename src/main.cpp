@@ -61,26 +61,6 @@ bool interactiveMode{false};
 
 const int cPointLightsNumber{4};
 
-std::filesystem::path fileToRead;
-void openFileDialog() {
-    fileToRead.clear();
-    nfdchar_t* outPath = nullptr;
-
-    nfdopendialogu8args_t args = {0};
-    args.filterList;
-    args.filterCount = 0;
-    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
-    if (result == NFD_OKAY) {
-        std::cout << "User selected: " << outPath << std::endl;
-        free(outPath);
-    } else if (result == NFD_CANCEL) {
-        std::cout << "User canceled." << std::endl;
-    } else {
-        std::cerr << "Error: " << NFD_GetError() << std::endl;
-    }
-    fileToRead = outPath;
-}
-
 int main() {
     // GLFW initialization -- addon to OpenGL to manages windows
     glfwInit();
@@ -343,13 +323,9 @@ void RenderImGui() {
     ImGui::NewFrame();
 
     // Example window
-    // ImGui::Begin("Hello, world!");
-    // ImGui::Text("This is a simple window!");
-    if (ImGui::Button("Open File")) {
-        std::cout << "Button clicked!" << std::endl;
-        openFileDialog();
-    }
-    // ImGui::End();
+    ImGui::Begin("Hello, world!");
+    ImGui::Text("This is a simple window!");
+    ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

@@ -16,7 +16,7 @@ struct TextureData {
 };
 
 struct Material {
-    glm::vec3 color;
+    glm::vec3 color = glm::vec3(0.0);
     std::optional<TextureData> textureData;
     float shininess = 32;
 };

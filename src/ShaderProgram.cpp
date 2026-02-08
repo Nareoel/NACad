@@ -5,6 +5,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <filesystem>
+#include <string>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -128,39 +130,51 @@ void ShaderProgram::setUniform(const std::string& varName, const glm::vec3& colo
     auto location = glGetUniformLocation(programId_, varName.c_str());
     glUniform3fv(location, 1, glm::value_ptr(color));
 }
+void ShaderProgram::clearMaterial(const std::string& structName) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    for (auto& textureTypeName : {"diffuse", "specular", "emission"}) {
+        auto textureLayersUniformName = structName + "." + textureTypeName + "LayersIndices";
+        auto countLayersUniformName = structName + "." + textureTypeName + "LayersCount";
+        setUniform(textureLayersUniformName, 0);
+        setUniform(countLayersUniformName, 0);
+    }
+}
 void ShaderProgram::setUniform(const std::string& structName, const Material& material) {
-    int diffuseCount{0};
-    int specularCount{0};
-    int emissionCount{0};
+    if (material.textureData) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, material.textureData->id);
+        setUniform("textureArray", 0);
+        auto fromTextureTypeToString = [](const TextureType& type) {
+            switch (type) {
+                case TextureType::Diffuse:
+                    return "diffuse";
+                case TextureType::Specular:
+                    return "specular";
+                case TextureType::Emission:
+                    return "emission";
+                default:
+                    return "";
+            }
+        };
+        for (const auto& textureType : {TextureType::Diffuse, TextureType::Specular, TextureType::Emission}) {
+            auto countLayersUniformName =
+                structName + "." + fromTextureTypeToString(textureType) + "LayersCount";
+            auto textureLayersIt = material.textureData->textures.find(textureType);
+            if (textureLayersIt == material.textureData->textures.end()) {
+                setUniform(countLayersUniformName, 0);
+                continue;
+            }
+            setUniform(countLayersUniformName, static_cast<int>(textureLayersIt->second.size()));
 
-    for (size_t textIndex = 0; textIndex < material.textures.size(); ++textIndex) {
-        auto& texture = material.textures[textIndex];
-
-        std::string uniformName = structName;
-        switch (texture.type) {
-            case TextureType::Diffuse:
-                uniformName += ".diffuse";
-                uniformName += "[" + std::to_string(diffuseCount++) + "]";
-                setUniform(uniformName, texture.id);
-                break;
-            case TextureType::Specular:
-                uniformName += ".specular";
-                uniformName += "[" + std::to_string(specularCount++) + "]";
-                setUniform(uniformName, texture.id);
-                break;
-            case TextureType::Emission:
-                uniformName += ".emission";
-                uniformName += "[" + std::to_string(emissionCount++) + "]";
-                setUniform(uniformName, texture.id);
-                break;
-            default:
-                break;
+            auto textureLayersUniformName =
+                structName + "." + fromTextureTypeToString(textureType) + "LayersIndices";
+            for (size_t i = 0; i < textureLayersIt->second.size(); ++i) {
+                auto layerUniformName = textureLayersUniformName + "[" + std::to_string(i) + "]";
+                setUniform(layerUniformName, textureLayersIt->second[i]);
+            }
         }
     }
-
-    setUniform(structName + ".diffuseTexturesNumber", diffuseCount);
-    setUniform(structName + ".specularTexturesNumber", specularCount);
-    setUniform(structName + ".emissionTexturesNumber", emissionCount);
     setUniform(structName + ".shininess", material.shininess);
     setUniform(structName + ".color", material.color);
 }

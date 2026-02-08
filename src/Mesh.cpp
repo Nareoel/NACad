@@ -45,15 +45,11 @@ void Mesh::draw(ShaderProgram& shader) const {
     // set material
     shader.setUniform("material", material_);
 
-    for (const auto& texture : material_.textures) {
-        glActiveTexture(GL_TEXTURE0 + texture.id);
-        glBindTexture(GL_TEXTURE_2D, texture.id);
-    }
-    glActiveTexture(GL_TEXTURE0);
-
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices_.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+
+    shader.clearMaterial("material");
 }
 void Mesh::setMaterial(const Material& material) { material_ = material; }
 

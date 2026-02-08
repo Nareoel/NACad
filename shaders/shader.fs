@@ -1,18 +1,13 @@
 #version 330 core
-#extension GL_ARB_gpu_shader5 : enable
 
-struct Material{
+struct MaterialData {
     vec3 color;
-
-    sampler2D diffuse[8];
-    int diffuseTexturesNumber;
-
-    sampler2D specular[8];
-    int specularTexturesNumber;
-
-    sampler2D emission[8];
-    int emissionTexturesNumber;
-
+    int diffuseLayersIndices[256];
+    int specularLayersIndices[256];
+    int emissionLayersIndices[256];
+    int diffuseLayersCount;
+    int specularLayersCount;
+    int emissionLayersCount;
     float shininess;
 };
 
@@ -62,7 +57,8 @@ in vec2 TexCoord;
 in vec3 FragPosition;
 in vec3 Normal;
 
-uniform Material material;
+uniform MaterialData material;
+uniform sampler2DArray textureArray;
 uniform GlobalLight globalLight;
 uniform PointLight pointlights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
@@ -79,16 +75,30 @@ void main(){
 
     // textures blending. Not sure if we realy need to blend them or sum is enough   
     vec3 diffuseTextureSum = vec3(0.0,0.0,0.0);
-    for(int i = 0; i < material.diffuseTexturesNumber; ++i){
-        diffuseTextureSum += texture(material.diffuse[i], TexCoord).rgb  * (1/float(material.diffuseTexturesNumber));
+    if(material.diffuseLayersCount > 0){
+        for(int i = 0; i < material.diffuseLayersCount; ++i){
+            int layerIndex = material.diffuseLayersIndices[i];
+            diffuseTextureSum += texture(textureArray, vec3(TexCoord, float(layerIndex))).rgb;
+        }
+        diffuseTextureSum /= float(material.diffuseLayersCount);
     }
-    vec3 specularTextureSum = vec3(0.0,0.0,0.0);;
-    for(int i = 0; i < material.specularTexturesNumber; ++i){
-        specularTextureSum += texture(material.specular[i], TexCoord).rgb  * (1/float(material.specularTexturesNumber));
+
+    vec3 specularTextureSum = vec3(0.0,0.0,0.0);
+    if(material.specularLayersCount > 0){
+        for(int i = 0; i < material.specularLayersCount; ++i){
+            int layerIndex = material.specularLayersIndices[i];
+            specularTextureSum += texture(textureArray, vec3(TexCoord, float(layerIndex))).rgb;
+        }
+        specularTextureSum /= float(material.specularLayersCount);
     }
-    vec3 eimssionTextureSum = vec3(0.0,0.0,0.0);;
-    for(int i = 0; i < material.emissionTexturesNumber; ++i){
-        eimssionTextureSum += texture(material.emission[i], TexCoord + vec2(0.0, time)).rgb  * (1/float(material.emissionTexturesNumber));
+
+    vec3 emissionTextureSum = vec3(0.0,0.0,0.0);
+    if(material.emissionLayersCount > 0){
+        for(int i = 0; i < material.emissionLayersCount; ++i){
+            int layerIndex = material.emissionLayersIndices[i];
+            emissionTextureSum += texture(textureArray, vec3(TexCoord + vec2(0.0, time), float(layerIndex))).rgb;
+        }
+        emissionTextureSum /= float(material.emissionLayersCount);  
     }
 
     vec3 normal = normalize(Normal);
@@ -102,7 +112,7 @@ void main(){
     result += calcSpotLight(spotLight, FragPosition, normal, viewDirection, diffuseTextureSum, specularTextureSum);
 
     // emission
-    vec3 emission = eimssionTextureSum * floor(vec3(1.0) - specularTextureSum);
+    vec3 emission = emissionTextureSum * floor(vec3(1.0) - specularTextureSum);
     result += emission;
     
     result += material.color;

@@ -93,3 +93,19 @@ std::shared_ptr<Mesh> createCubeMesh(const Material& material) {
 
     return std::make_shared<Mesh>(vertices, indeces, material);
 }
+
+std::shared_ptr<Mesh> createPlaneMesh(const Material& material) {
+    std::vector<Vertex> vertices = {
+        // position          // normal            // texture coords
+        Vertex{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)},    // 0 -- 0
+        Vertex{glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)},   // 1
+        Vertex{glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)},  // 2
+        Vertex{glm::vec3(-0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)},   // 3
+    };
+
+    std::vector<int> indeces = {
+        0, 1, 3, 1, 2, 3,  // 0 side
+    };
+
+    return std::make_shared<Mesh>(vertices, indeces, material);
+}

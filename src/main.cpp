@@ -121,16 +121,31 @@ int main() {
     Material lightSourceMaterial;
     { lightSourceMaterial.color = defaultGlobalLightColor; }
 
+    Material windowMaterial;
+    {
+        std::filesystem::path windowImage("samples/transWindow.png");
+        auto windowImageInfo = Utils::createTextureFromImages({windowImage});
+        TextureData textureData;
+        textureData.id = windowImageInfo.first;
+        textureData.textures = {{TextureType::Diffuse, {windowImageInfo.second["samples/transWindow.png"]}}};
+        windowMaterial.textureData = std::move(textureData);
+        windowMaterial.color = glm::vec3(0, 0, 0);
+        windowMaterial.shininess = 1024;
+    }
+
     auto shaderProgram = ShaderProgram::createShaderProgram("shaders/shader.vs", "shaders/shader.fs");
     if (!shaderProgram) {
         return 0;
     }
     auto cubeMesh = createCubeMesh(Material());
+    auto planeMesh = createPlaneMesh(Material());
 
     Model backpackModel("samples/backpack/backpack.obj");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetScrollCallback(window, scrollCallback);
@@ -177,8 +192,8 @@ int main() {
 
         // containers
         cubeMesh->setMaterial(containerMaterial);
-        int cubeNumberXYPlane = 6;
-        double positionRadius = 3;
+        const int cubeNumberXYPlane = 6;
+        const double positionRadius = 3;
         for (int i = 1; i <= cubeNumberXYPlane; i++) {
             auto modelTr = glm::translate(
                 glm::mat4(1.0f),
@@ -186,6 +201,18 @@ int main() {
                           positionRadius * sin(2 * double(i) * M_PI / cubeNumberXYPlane), double(i) / 2));
             cubeMesh->setModelTr(modelTr);
             cubeMesh->draw(*shaderProgram);
+        }
+
+        // window
+        planeMesh->setMaterial(windowMaterial);
+        for (int i = 1; i <= cubeNumberXYPlane; i++) {
+            auto modelTr = glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(positionRadius * cos(2 * double(i) * M_PI / cubeNumberXYPlane),
+                          positionRadius * sin(2 * double(i) * M_PI / cubeNumberXYPlane), double(i) / 2) +
+                    glm::vec3(0, 0, 1e-3));
+            planeMesh->setModelTr(modelTr);
+            planeMesh->draw(*shaderProgram);
         }
 
         // global light source

@@ -75,12 +75,16 @@ void main(){
 
     // textures blending. Not sure if we realy need to blend them or sum is enough   
     vec3 diffuseTextureSum = vec3(0.0,0.0,0.0);
+    float alpha = 1.0;
     if(material.diffuseLayersCount > 0){
         for(int i = 0; i < material.diffuseLayersCount; ++i){
             int layerIndex = material.diffuseLayersIndices[i];
             diffuseTextureSum += texture(textureArray, vec3(TexCoord, float(layerIndex))).rgb;
         }
         diffuseTextureSum /= float(material.diffuseLayersCount);
+        // ugly -- need to fix. actually I don't know why we need more than one texture layer with the same type -- need to review
+        int firstIndex =  material.diffuseLayersIndices[0];
+        alpha = texture(textureArray, vec3(TexCoord, float(firstIndex))).a;
     }
 
     vec3 specularTextureSum = vec3(0.0,0.0,0.0);
@@ -117,7 +121,7 @@ void main(){
     
     result += material.color;
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, alpha);
 }
 
 vec3 calcGlobalLight(GlobalLight light, vec3 normal, vec3 viewDir, vec3 diffuseTextureSum, vec3 specularTextureSum){

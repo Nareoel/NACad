@@ -33,3 +33,4 @@ class Mesh {
 };
 
 std::shared_ptr<Mesh> createCubeMesh(const Material& material);
+std::shared_ptr<Mesh> createPlaneMesh(const Material& material);

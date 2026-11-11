@@ -75,6 +75,8 @@ FetchContent_MakeAvailable(assimp)
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
+    # commit before stb_image_resize2.h moved to deprecated/
+    GIT_TAG 2b2e64bc4778df6a06fbea3a5dbe61f7a76ecf19
     SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/stb-src"
     BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/stb-build"
 )

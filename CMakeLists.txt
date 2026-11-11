@@ -69,6 +69,7 @@ FetchContent_Declare(
 )
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(assimp)
 
 # --- stb (header-only) --- stb_image.cpp is in src folder

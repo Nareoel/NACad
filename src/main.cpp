@@ -119,7 +119,9 @@ int main() {
         containerMaterial.shininess = 1024;
     }
     Material lightSourceMaterial;
-    { lightSourceMaterial.color = defaultGlobalLightColor; }
+    {
+        lightSourceMaterial.color = defaultGlobalLightColor;
+    }
 
     auto shaderProgram = ShaderProgram::createShaderProgram("shaders/shader.vs", "shaders/shader.fs");
     if (!shaderProgram) {
@@ -128,6 +130,10 @@ int main() {
     auto cubeMesh = createCubeMesh(Material());
 
     Model backpackModel("samples/backpack/backpack.obj");
+
+    Model spiderModel("samples/spider/Only_Spider_with_Animations_Export.obj");
+    spiderModel.setModelTr(
+        glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, -2.0f, 0.0f)), glm::vec3(0.02f)));
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
@@ -209,6 +215,7 @@ int main() {
         cubeMesh->resetModelTr();
 
         backpackModel.draw(*shaderProgram);
+        spiderModel.draw(*shaderProgram);
 
         RenderImGui();
 

@@ -12,6 +12,7 @@ class Model {
     Model(const std::filesystem::path& file);
     void loadModel(const std::filesystem::path& file);
     void draw(ShaderProgram& shader) const;
+    void setModelTr(const glm::mat4& tr);
 
     using ImagesInfo = std::vector<std::pair<TextureType, std::filesystem::path>>;
 

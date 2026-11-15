@@ -50,6 +50,12 @@ void Model::draw(ShaderProgram& shader) const {
     }
 }
 
+void Model::setModelTr(const glm::mat4& tr) {
+    for (const auto& mesh : meshesAndImagesInfo_ | std::views::keys) {
+        mesh->setModelTr(tr);
+    }
+}
+
 void Model::processNode_(aiNode* node, const aiScene* scene) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         auto* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -86,11 +92,11 @@ void Model::loadFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
 
     auto ourMesh = std::make_unique<Mesh>(vertices, indices, Material{});
 
-    if (mesh->mMaterialIndex > 0) {
-        auto materials = scene->mMaterials[mesh->mMaterialIndex];
-        auto images = sLoadImagesInfoFromAssimpMaterial(materials, directory_);
-        meshesAndImagesInfo_.emplace(std::make_pair(std::move(ourMesh), images));
+    ImagesInfo images;
+    if (mesh->mMaterialIndex < scene->mNumMaterials) {
+        images = sLoadImagesInfoFromAssimpMaterial(scene->mMaterials[mesh->mMaterialIndex], directory_);
     }
+    meshesAndImagesInfo_.emplace(std::move(ourMesh), std::move(images));
 }
 
 void Model::createTexturesAndSetMaterial_() {

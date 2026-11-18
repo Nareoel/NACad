@@ -25,7 +25,7 @@ class Mesh {
     std::vector<Vertex> vertices_;
     std::vector<int> indices_;
     Material material_;
-    unsigned int VAO, VBO, EBO;
+    unsigned int vao_, vbo_, ebo_;
     glm::mat4 modelTr_{glm::mat4(1.0f)};
     glm::mat4 localTr_{glm::mat4(1.0f)};
 

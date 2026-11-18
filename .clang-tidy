@@ -1,0 +1,42 @@
+# Naming rules for NACad. The full style guide is docs/CODE_STYLE.md.
+# CamelCase = LikeThis, camelBack = likeThis.
+Checks: '-*,readability-identifier-naming'
+WarningsAsErrors: ''
+# Only report problems in our own code (src/ and geom/), never in third-party headers.
+HeaderFilterRegex: '(^|/)(src|geom)/'
+ExcludeHeaderFilterRegex: '(^|/)(externals|_deps)/'
+FormatStyle: file
+CheckOptions:
+  # Types
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.ConceptCase: CamelCase
+  # Functions
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.PrivateMethodCase: camelBack
+  readability-identifier-naming.PrivateMethodSuffix: '_'
+  readability-identifier-naming.ProtectedMethodCase: camelBack
+  readability-identifier-naming.ProtectedMethodSuffix: '_'
+  # Data members
+  readability-identifier-naming.PublicMemberCase: camelBack
+  readability-identifier-naming.PrivateMemberCase: camelBack
+  readability-identifier-naming.PrivateMemberSuffix: '_'
+  readability-identifier-naming.ProtectedMemberCase: camelBack
+  readability-identifier-naming.ProtectedMemberSuffix: '_'
+  # Variables and constants
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.ParameterCase: camelBack
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: 'c'
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: 'c'
+  # Other
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

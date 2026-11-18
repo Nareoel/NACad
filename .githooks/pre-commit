@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Scan the staged changes for secrets before every commit (see CONTRIBUTING.md).
+# Enable with: git config core.hooksPath .githooks
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks is not installed, skipping the secret scan (see CONTRIBUTING.md)." >&2
+    exit 0
+fi
+
+gitleaks git --pre-commit --staged --redact --no-banner
+status=$?
+if [ "$status" -ne 0 ]; then
+    echo "pre-commit: gitleaks found possible secrets, commit aborted." >&2
+fi
+exit "$status"

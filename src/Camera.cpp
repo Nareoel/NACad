@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "Camera.h"
 
 #include <algorithm>
 
@@ -8,25 +8,25 @@ float Camera::fieldOfView() const { return fieldOfView_; }
 glm::mat4 Camera::viewMatrix() const { return glm::lookAt(position_, position_ + front_, up_); }
 const glm::vec3& Camera::position() const { return position_; }
 const glm::vec3& Camera::front() const { return front_; }
-void Camera::processKeyboard(movementType movement, double deltaTime) {
+void Camera::processKeyboard(MovementType movement, double deltaTime) {
     float velocity = movementSpeed_ * deltaTime;
     switch (movement) {
-        case Camera::movementType::BACKWARD:
+        case Camera::MovementType::Backward:
             position_ -= velocity * front_;
             break;
-        case Camera::movementType::FORWARD:
+        case Camera::MovementType::Forward:
             position_ += velocity * front_;
             break;
-        case Camera::movementType::LEFT:
+        case Camera::MovementType::Left:
             position_ -= glm::normalize(glm::cross(front_, up_)) * velocity;
             break;
-        case Camera::movementType::RIGHT:
+        case Camera::MovementType::Right:
             position_ += glm::normalize(glm::cross(front_, up_)) * velocity;
             break;
-        case Camera::movementType::DOWN:
+        case Camera::MovementType::Down:
             position_ -= up_ * velocity;
             break;
-        case Camera::movementType::UP:
+        case Camera::MovementType::Up:
             position_ += up_ * velocity;
             break;
         default:
@@ -36,9 +36,9 @@ void Camera::processKeyboard(movementType movement, double deltaTime) {
     update_();
 }
 void Camera::processMouse(double xOffset, double yOffset) {
-    constexpr float sensitivity = 0.1f;
-    xOffset *= sensitivity;
-    yOffset *= sensitivity;
+    constexpr float cSensitivity = 0.1f;
+    xOffset *= cSensitivity;
+    yOffset *= cSensitivity;
 
     yaw_ += xOffset;
     pitch_ += yOffset;
@@ -51,9 +51,9 @@ void Camera::processMouse(double xOffset, double yOffset) {
 }
 void Camera::processScroll(double yOffset) {
     fieldOfView_ -= static_cast<float>(yOffset);
-    constexpr double fowUpperConstrain{45.0f};
-    constexpr double fowLowerConstrain{1.0f};
-    fieldOfView_ = std::clamp(fieldOfView_, fowLowerConstrain, fowUpperConstrain);
+    constexpr double cFovUpperConstraint{45.0f};
+    constexpr double cFovLowerConstraint{1.0f};
+    fieldOfView_ = std::clamp(fieldOfView_, cFovLowerConstraint, cFovUpperConstraint);
     update_();
 }
 void Camera::resetView() {

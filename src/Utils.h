@@ -12,8 +12,8 @@
 #include "ShaderProgram.h"
 
 using TextureID = unsigned int;
-namespace Utils {
+namespace utils {
 
 using TextureInfo = std::pair<TextureID, std::unordered_map<std::filesystem::path, TextureLayerIndex>>;
 TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::path>& uniqueImages);
-}  // namespace Utils
+}  // namespace utils

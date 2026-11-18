@@ -38,5 +38,7 @@ CheckOptions:
   readability-identifier-naming.ConstexprVariableCase: CamelCase
   readability-identifier-naming.ConstexprVariablePrefix: 'c'
   # Other
-  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.NamespaceCase: CamelCase
+  # exception: the usual short alias of std::filesystem
+  readability-identifier-naming.NamespaceIgnoredRegexp: '^fs$'
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

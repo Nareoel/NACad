@@ -25,7 +25,7 @@ Rules marked *(manual)* can't be checked by clang-tidy, so they're checked in re
 | Variables and parameters | lowerCamelCase | `deltaTime`, `filePath` |
 | Constants (global, namespace-scope and `constexpr`) | `c` + PascalCase | `cPointLightsNumber`, `cDefaultColor`, `cSensitivity` |
 | File-local helper functions *(manual)* | in an anonymous namespace, `s` + PascalCase | `sLoadImage()`, `sSetupImGui()` |
-| Namespaces | lowercase | `utils` |
+| Namespaces | PascalCase (exception: the alias `namespace fs = std::filesystem;`) | `Utils` |
 | Macros | UPPER_CASE (avoid macros where possible) | `GLFW_INCLUDE_NONE` |
 
 Abbreviations *(manual)*: `Tr` means transform (`localTr_`, `projectionTr`). Spell other words in full.

@@ -109,7 +109,7 @@ int main() {
             "samples/containerMetalBorder.png",
             "samples/matrix.jpg",
         };
-        auto containerTextureInfo = utils::createTextureFromImages(containerImages);
+        auto containerTextureInfo = Utils::createTextureFromImages(containerImages);
         TextureData textureData;
         textureData.id = containerTextureInfo.first;
         textureData.textures = {

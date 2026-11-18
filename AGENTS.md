@@ -48,7 +48,7 @@ New `.cpp` files are added to the build automatically, but you need to re-run th
 | `ShaderProgram.h/.cpp` | Defines the **core data types** (`TextureType`, `TextureData`, `Material`, `GlobalLight`, `PointLight`, `SpotLight`) and the `ShaderProgram` class: compile/link through the `createShaderProgram(vs, fs)` factory (returns `std::optional`) plus `setUniform` overloads for scalars, `vec3`, `mat4` and each struct. |
 | `Mesh.h/.cpp` | `Vertex` (pos, normal, uv) and `Mesh` (VAO/VBO/EBO, material, `modelTr_` + `localTr_`). `draw()` sets the transforms and material, draws, then calls `clearMaterial`. Also `createCubeMesh()` (24 verts, 36 indices). |
 | `Model.h/.cpp` | Loads a file with assimp (`Triangulate | FlipUVs`), walks the nodes recursively, turns each `aiMesh` into a `Mesh`, then packs every unique texture into **one** texture array and assigns per-mesh `Material`s. Every mesh is kept; one with no textures (or an out-of-range material index) gets the default color. `setModelTr(mat4)` applies a transform to all its meshes. |
-| `Utils.h/.cpp` | `utils::createTextureFromImages(set<path>)` loads the images with stb, normalises them to the max width/height/channels (resizing with `stbir_resize_uint8_linear`), uploads them as layers of a `GL_TEXTURE_2D_ARRAY` and returns `{textureId, path -> layerIndex}`. |
+| `Utils.h/.cpp` | `Utils::createTextureFromImages(set<path>)` loads the images with stb, normalises them to the max width/height/channels (resizing with `stbir_resize_uint8_linear`), uploads them as layers of a `GL_TEXTURE_2D_ARRAY` and returns `{textureId, path -> layerIndex}`. |
 | `Camera.h/.cpp` | FPS-style `Camera` (yaw/pitch, FOV clamp 1–45, speed 2.5). `resetView()` swaps with a default-constructed camera. |
 | `stb_image.cpp` | The single translation unit that holds `STB_IMAGE_IMPLEMENTATION` and `STB_IMAGE_RESIZE2_IMPLEMENTATION`. Don't define these anywhere else. |
 
@@ -81,7 +81,7 @@ global/point/spot light, I toggle interactive mode (frees the cursor for ImGui),
 
 - Meshes without textures render as flat unlit color, because `shader.fs` multiplies the lighting by
   the texture colors.
-- `utils::createTextureFromImages` uses the same `format` (GL_RED/RGB/RGBA) as both internal and
+- `Utils::createTextureFromImages` uses the same `format` (GL_RED/RGB/RGBA) as both internal and
   external format. `format` is uninitialised if the image has 2 channels.
 - `CMakeLists.txt`: `add_compile_options(${PROJECT_NAME} PRIVATE ...)` is called after `add_executable`
   with target-style arguments, so the warning flags do not actually apply to the target (the intended

@@ -104,7 +104,7 @@ void Model::createTexturesAndSetMaterial_() {
     for (const auto& images : meshesAndImagesInfo_ | std::views::values | std::views::join) {
         uniqueImages.insert(images.second);
     }
-    const auto [textureId, textureLayersMap] = utils::createTextureFromImages(uniqueImages);
+    const auto [textureId, textureLayersMap] = Utils::createTextureFromImages(uniqueImages);
 
     for (auto& [mesh, imagesInfo] : meshesAndImagesInfo_) {
         Material material;

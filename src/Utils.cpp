@@ -35,7 +35,7 @@ std::optional<ImageData> sLoadImage(const std::filesystem::path& path) {
 
 }  // namespace
 
-namespace utils {
+namespace Utils {
 
 TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::path>& uniqueImagesPaths) {
     if (uniqueImagesPaths.empty()) {
@@ -127,4 +127,4 @@ TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::pa
     return textureInfo;
 }
 
-}  // namespace utils
+}  // namespace Utils

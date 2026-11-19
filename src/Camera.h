@@ -6,14 +6,14 @@
 
 class Camera {
    public:
-    enum class movementType { FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN };
+    enum class MovementType { Forward, Backward, Left, Right, Up, Down };
     Camera();
 
     float fieldOfView() const;
     glm::mat4 viewMatrix() const;
     const glm::vec3& position() const;
     const glm::vec3& front() const;
-    void processKeyboard(movementType movement, double deltaTime);
+    void processKeyboard(MovementType movement, double deltaTime);
     void processMouse(double xOffset, double yOffset);
     void processScroll(double yOffset);
     void resetView();

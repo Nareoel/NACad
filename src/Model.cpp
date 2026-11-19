@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 namespace {
-const glm::vec3 defaultColor(1.0f, 0.925f, 0.5568f);
+const glm::vec3 cDefaultColor(1.0f, 0.925f, 0.5568f);
 const std::unordered_map<aiTextureType, TextureType> cAiTextureTypeToOurTextureType{
     {aiTextureType_DIFFUSE, TextureType::Diffuse},
     {aiTextureType_SPECULAR, TextureType::Specular},
@@ -117,7 +117,7 @@ void Model::createTexturesAndSetMaterial_() {
             }
         }
         if (textures.empty()) {
-            material.color = defaultColor;
+            material.color = cDefaultColor;
         } else {
             material.textureData = TextureData{.id = textureId, .textures = std::move(textures)};
         }

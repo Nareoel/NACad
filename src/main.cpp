@@ -13,7 +13,7 @@
 
 #include "ShaderProgram.h"
 #include "Mesh.h"
-#include "camera.h"
+#include "Camera.h"
 #include "Utils.h"
 #include "Model.h"
 #include <cmath>
@@ -22,28 +22,31 @@
 #include <functional>
 #include <math.h>
 
+namespace {
 // set GLViewport if user changes screen size
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void sFramebufferSizeCallback(GLFWwindow* window, int width, int height);
 // catch key released callback
-void processInput(GLFWwindow* window);
+void sProcessInput(GLFWwindow* window);
 // catch key pressed once callback
-void lightsInputkeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void sLightsInputKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 // catch mouse callbacks
-void mouseCallback(GLFWwindow* window, double xPos, double yPos);
-void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+void sMouseCallback(GLFWwindow* window, double xPos, double yPos);
+void sScrollCallback(GLFWwindow* window, double xOffset, double yOffset);
 
 // Initialize ImGui
-void SetupImGui(GLFWwindow* window);
+void sSetupImGui(GLFWwindow* window);
 
 // Cleanup ImGui
-void CleanupImGui();
+void sCleanupImGui();
 
 // Draw ImGui frame
-void RenderImGui();
+void sRenderImGui();
+
+}  // namespace
 
 // ToDo remove global variables
 Camera camera;
-bool firstWidowFocus{true};
+bool firstWindowFocus{true};
 float deltaTime = 0.0f;
 float lastFrameTime = 0.0f;
 float lastXPos = 800 / 2;
@@ -53,9 +56,9 @@ bool globalLightOn{true};
 glm::vec3 defaultGlobalLightColor = glm::vec3(1.0f, 0.925f, 0.5568f);
 bool pointLightOn{true};
 // point light is the same color as global because light cubes shares one shader
-glm::vec3 defualtPointLightColor = defaultGlobalLightColor;  // glm::vec3(0.8906f, 0.4375f, 0.144531f);
+glm::vec3 defaultPointLightColor = defaultGlobalLightColor;  // glm::vec3(0.8906f, 0.4375f, 0.144531f);
 bool spotLightOn{true};
-glm::vec3 defualtSpotLightColor = glm::vec3(1.0f, 1.0f, 1.f);
+glm::vec3 defaultSpotLightColor = glm::vec3(1.0f, 1.0f, 1.f);
 
 bool interactiveMode{false};
 
@@ -76,7 +79,7 @@ int main() {
         glfwTerminate();
         return -1;
     }
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, sFramebufferSizeCallback);
     glfwMakeContextCurrent(window);
 
     // GLAD initialization - manages function pointers to OpenGL
@@ -93,7 +96,7 @@ int main() {
     const glm::vec3 pointLightShift{glm::vec3(0.0, 2.0, 0.0)};
     for (int i = 0; i < cPointLightsNumber; ++i) {
         auto& pointLight = pointLights[i];
-        pointLight.color = defualtPointLightColor;
+        pointLight.color = defaultPointLightColor;
         pointLight.position = glm::vec3(0.0, 2.0, 0.0) + pointLightShift * static_cast<float>(i);
     }
 
@@ -138,21 +141,21 @@ int main() {
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window, scrollCallback);
+    glfwSetCursorPosCallback(window, sMouseCallback);
+    glfwSetScrollCallback(window, sScrollCallback);
 
-    glfwSetKeyCallback(window, lightsInputkeyCallback);
-    SetupImGui(window);
+    glfwSetKeyCallback(window, sLightsInputKeyCallback);
+    sSetupImGui(window);
     while (!glfwWindowShouldClose(window)) {
         // catch key released callbacks
-        processInput(window);
+        sProcessInput(window);
 
         if (interactiveMode) {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             glfwSetCursorPosCallback(window, nullptr);
         } else {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            glfwSetCursorPosCallback(window, mouseCallback);
+            glfwSetCursorPosCallback(window, sMouseCallback);
         }
         // --------------- actual render here
         // set some color. This color will be setted each time we call glClear
@@ -166,11 +169,11 @@ int main() {
         for (int i = 0; i < cPointLightsNumber; ++i) {
             auto& pointLight = pointLights[i];
 
-            pointLight.color = pointLightOn ? defualtPointLightColor : glm::vec3(0.0);
+            pointLight.color = pointLightOn ? defaultPointLightColor : glm::vec3(0.0);
             auto uniformName = "pointlights[" + std::to_string(i) + "]";
             shaderProgram->setUniform(uniformName, pointLight);
         }
-        spotLight.color = spotLightOn ? defualtSpotLightColor : glm::vec3(0);
+        spotLight.color = spotLightOn ? defaultSpotLightColor : glm::vec3(0);
         spotLight.position = camera.position();
         spotLight.direction = camera.front();
         shaderProgram->setUniform("spotLight", spotLight);
@@ -217,7 +220,7 @@ int main() {
         backpackModel.draw(*shaderProgram);
         spiderModel.draw(*shaderProgram);
 
-        RenderImGui();
+        sRenderImGui();
 
         // swap front and back buffers
         glfwSwapBuffers(window);
@@ -225,15 +228,17 @@ int main() {
         glfwPollEvents();
     }
 
-    CleanupImGui();
+    sCleanupImGui();
     // glfw: terminate, clearing all previously allocated GLFW resources.
     glfwTerminate();
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
+namespace {
 
-void lightsInputkeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void sFramebufferSizeCallback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
+
+void sLightsInputKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         // Only triggered once per key press
         if (key == GLFW_KEY_G) {
@@ -251,7 +256,7 @@ void lightsInputkeyCallback(GLFWwindow* window, int key, int scancode, int actio
     }
 }
 
-void processInput(GLFWwindow* window) {
+void sProcessInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
@@ -261,34 +266,34 @@ void processInput(GLFWwindow* window) {
     deltaTime = glfwGetTime() - lastFrameTime;
     lastFrameTime = glfwGetTime();
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::FORWARD, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Forward, deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::BACKWARD, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Backward, deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::RIGHT, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Right, deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::LEFT, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Left, deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::DOWN, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Down, deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        camera.processKeyboard(Camera::movementType::UP, deltaTime);
+        camera.processKeyboard(Camera::MovementType::Up, deltaTime);
     }
 }
 
-void mouseCallback(GLFWwindow* window, double xPos, double yPos) {
+void sMouseCallback(GLFWwindow* window, double xPos, double yPos) {
     if (!glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
         return;
     }
 
-    if (firstWidowFocus) {
+    if (firstWindowFocus) {
         lastXPos = xPos;
         lastYPos = yPos;
-        firstWidowFocus = false;
+        firstWindowFocus = false;
     }
 
     auto xOffset = xPos - lastXPos;
@@ -299,14 +304,14 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos) {
     camera.processMouse(xOffset, yOffset);
 }
 
-void scrollCallback(GLFWwindow* window, double, double yOffset) {
+void sScrollCallback(GLFWwindow* window, double, double yOffset) {
     if (!glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
         return;
     }
     camera.processScroll(yOffset);
 }
 
-void SetupImGui(GLFWwindow* window) {
+void sSetupImGui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -318,13 +323,13 @@ void SetupImGui(GLFWwindow* window) {
     ImGui_ImplOpenGL3_Init("#version 330");
 }
 
-void CleanupImGui() {
+void sCleanupImGui() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
-void RenderImGui() {
+void sRenderImGui() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -336,3 +341,5 @@ void RenderImGui() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
+}  // namespace

@@ -19,7 +19,8 @@ reasonable length.
 
 - The subject is the commit's first line. For a PR, the PR title plays that role.
 - Leave out `## Detailed description` when the brief description says enough.
-- Attribution trailers (such as `Co-Authored-By:`) go at the very end, after both sections.
+- No AI attribution: commits and PRs must not contain `Co-Authored-By: Claude ...` trailers,
+  "Generated with Claude Code" lines or any similar note that an AI tool wrote them.
 
 ## Secrets and personal data
 

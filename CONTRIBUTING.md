@@ -22,6 +22,20 @@ reasonable length.
 - No AI attribution: commits and PRs must not contain `Co-Authored-By: Claude ...` trailers,
   "Generated with Claude Code" lines or any similar note that an AI tool wrote them.
 
+### Merge commit message
+
+When a PR is merged, the merge (or squash) commit message contains only the subject, the
+`## Brief description` and a link to the PR, where the detailed description lives:
+
+```
+<PR title> (#<number>)
+
+## Brief description
+- One short sentence per problem / fix / improvement.
+
+PR: https://github.com/Nareoel/NACad/pull/<number>
+```
+
 ## Secrets and personal data
 
 - Never commit credentials, tokens, API keys, private keys, `.env` files or personal data (emails,

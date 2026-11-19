@@ -236,9 +236,11 @@ int main() {
 
 namespace {
 
-void sFramebufferSizeCallback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
+void sFramebufferSizeCallback(GLFWwindow* /*window*/, int width, int height) {
+    glViewport(0, 0, width, height);
+}
 
-void sLightsInputKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void sLightsInputKeyCallback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int /*mods*/) {
     if (action == GLFW_PRESS) {
         // Only triggered once per key press
         if (key == GLFW_KEY_G) {

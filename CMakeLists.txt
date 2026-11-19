@@ -1,7 +1,15 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.18)
 project(NACad LANGUAGES C CXX)
 
 cmake_policy(SET CMP0077 NEW) # respect BUILD_SHARED_LIBS
+
+# -----------------------------------------------------------
+# Project options
+# -----------------------------------------------------------
+option(NACAD_BUILD_VIEWER "Build the NACad viewer (GLFW/OpenGL/ImGui/assimp)" ON)
+option(NACAD_BUILD_TESTS "Build the unit tests (doctest + CTest)" ON)
+option(NACAD_COVERAGE "Build nacad_geom and its tests with coverage instrumentation (GCC/Clang)" OFF)
+option(NACAD_SANITIZE "Build nacad_geom and its tests with ASan + UBSan (GCC/Clang)" OFF)
 
 # -----------------------------------------------------------
 # Compiler and build options
@@ -18,15 +26,70 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include(FetchContent)
 
-# --- Optional: separate output folders ---
-set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/externals)
+# Dependencies are downloaded and built inside each build dir (<build>/_deps), so build dirs never
+# share FetchContent state (sharing it broke configures across generators and CMake versions).
+# Some deps (e.g. glad) still declare cmake_minimum_required < 3.5, which CMake >= 4 rejects.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+if(NACAD_BUILD_TESTS)
+    enable_testing()
+endif()
+
+# nacad_options (warnings) and nacad_dev_options (coverage, sanitizers)
+include(${CMAKE_SOURCE_DIR}/cmake/NacadOptions.cmake)
+
 # -----------------------------------------------------------
-# Dependencies
+# Core dependencies (always needed)
+# -----------------------------------------------------------
+
+# --- Eigen (header-only) ---
+# SOURCE_SUBDIR points at a nonexistent dir, so FetchContent only downloads Eigen and does not run
+# its own (heavy) CMake. We provide the Eigen3::Eigen target ourselves.
+FetchContent_Declare(
+    eigen
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+    GIT_TAG 3.4.0
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR do-not-add
+)
+FetchContent_MakeAvailable(eigen)
+
+add_library(nacad_eigen INTERFACE)
+target_include_directories(nacad_eigen SYSTEM INTERFACE ${eigen_SOURCE_DIR})
+add_library(Eigen3::Eigen ALIAS nacad_eigen)
+
+# --- doctest (header-only, tests only) ---
+# Same download-only trick: doctest v2.4.11's CMakeLists requires CMake 3.0, which CMake >= 4 refuses.
+if(NACAD_BUILD_TESTS)
+    FetchContent_Declare(
+        doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG v2.4.11
+        GIT_SHALLOW TRUE
+        SOURCE_SUBDIR do-not-add
+    )
+    FetchContent_MakeAvailable(doctest)
+
+    add_library(nacad_doctest INTERFACE)
+    target_include_directories(nacad_doctest SYSTEM INTERFACE ${doctest_SOURCE_DIR})
+    add_library(doctest::doctest ALIAS nacad_doctest)
+
+    include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
+endif()
+
+# -----------------------------------------------------------
+# Geometry library (GL-free) + its tests
+# -----------------------------------------------------------
+add_subdirectory(geom)
+
+if(NACAD_BUILD_VIEWER)
+
+# -----------------------------------------------------------
+# Viewer dependencies
 # -----------------------------------------------------------
 
 # --- GLAD ---
@@ -34,9 +97,7 @@ FetchContent_Declare(
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
     GIT_TAG v0.1.36
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glad-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glad-build"
-) 
+)
 FetchContent_MakeAvailable(glad)
 
 # --- GLFW ---
@@ -44,8 +105,6 @@ FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.4
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glfw-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glfw-build"
 )
 FetchContent_MakeAvailable(glfw)
 
@@ -54,8 +113,6 @@ FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG 1.0.1
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/glm-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/glm-build"
 )
 FetchContent_MakeAvailable(glm)
 
@@ -64,8 +121,6 @@ FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
     GIT_TAG v5.3.1
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/assimp-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/assimp-build"
 )
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
@@ -78,8 +133,6 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/nothings/stb.git
     # commit before stb_image_resize2.h moved to deprecated/
     GIT_TAG 2b2e64bc4778df6a06fbea3a5dbe61f7a76ecf19
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/stb-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/stb-build"
 )
 FetchContent_MakeAvailable(stb)
 
@@ -88,8 +141,6 @@ FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.92.0
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/imgui-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/imgui-build"
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -116,8 +167,6 @@ FetchContent_Declare(
     nfd
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
     GIT_TAG v1.2.1
-    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/_deps/nfd-src"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/nfd-build"
 )
 FetchContent_MakeAvailable(nfd)
 
@@ -131,10 +180,7 @@ file(GLOB_RECURSE SRC_FILES
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-add_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
     ${stb_SOURCE_DIR}
     ${nfd_SOURCE_DIR}/include
 )
@@ -151,6 +197,8 @@ target_link_libraries(${PROJECT_NAME}
     imgui
     nfd
     ${OPENGL_LIBRARIES}
+    nacad_geom
+    nacad_options
 )
 
 if(UNIX)
@@ -189,3 +237,5 @@ add_custom_command(
 message(STATUS "All dependencies fetched, built as shared libs, and linked successfully!")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "ImGui source directory: ${imgui_SOURCE_DIR}")
+
+endif() # NACAD_BUILD_VIEWER

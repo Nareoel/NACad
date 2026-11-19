@@ -45,4 +45,11 @@ Abbreviations *(manual)*: `Tr` means transform (`localTr_`, `projectionTr`). Spe
 - Functions that can fail return `std::optional` (see `ShaderProgram::createShaderProgram`).
 - Take parameters by `const&` when they aren't cheap to copy. Use `auto` when the type is obvious.
 - Prefer range-based `for` and `std::ranges` / `std::views`.
-- Comments use `//` and start in lowercase. Write them only where the code isn't self-explanatory.
+
+## Comments
+
+- **Comment sparingly.** Add a comment only when the code can't be understood without it: a non-obvious
+  why, a math formula or paper reference, a workaround, an invariant the code relies on.
+- Don't restate what the code says (`// increment i`, `// returns the version`), don't narrate steps,
+  and don't leave commented-out code. Prefer clearer names over a comment.
+- Comments use `//` and start in lowercase.

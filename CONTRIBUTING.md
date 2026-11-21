@@ -42,8 +42,9 @@ PR: https://github.com/Nareoel/NACad/pull/<number>
 pass. The build and test commands are in [AGENTS.md](AGENTS.md#tests).
 
 - Framework: **doctest**, registered with **CTest**. Each `TEST_CASE` is its own CTest test.
-- Layout: `geom/tests/test_<module>.cpp`, mirroring the library modules. Add every new test file to
-  the source list in `geom/CMakeLists.txt`.
+- Layout: `geom/tests/test_<module>.cpp` for the geometry library and `viewer/tests/test_<module>.cpp`
+  for the GL-free viewer core (`viewer/core/`), mirroring the library modules. Add every new test file
+  to the source list in `geom/CMakeLists.txt` or `viewer/CMakeLists.txt`.
 - **Self-contained test data.** Build meshes in code (tetrahedron, cube, icosphere, open grid,
   deliberately broken cases) or embed small files as strings. Tests never depend on the gitignored
   `samples/`.
@@ -55,10 +56,10 @@ pass. The build and test commands are in [AGENTS.md](AGENTS.md#tests).
   - floating-point values with `doctest::Approx` and explicit tolerances;
   - a regression test for every bug fixed.
 - **Coverage:** `NACAD_COVERAGE=ON` + the `coverage` target (needs `gcovr`). Target: at least 90% line
-  coverage for `nacad_geom`, and any uncovered code is justified.
+  coverage for `nacad_geom` and `nacad_viewer_core`, and any uncovered code is justified.
 - **Sanitizers:** run the tests with `NACAD_SANITIZE=ON` (ASan + UBSan) before calling a change done.
 - **Viewer:** GL calls aren't unit-tested. Keep logic (camera math, picking, selection, tool state)
-  free of GL calls so it can be tested, and check rendering by running the viewer.
+  free of GL calls in `viewer/core/` so it can be tested, and check rendering by running the viewer.
 
 ## Secrets and personal data
 

@@ -8,8 +8,8 @@ cmake_policy(SET CMP0077 NEW) # respect BUILD_SHARED_LIBS
 # -----------------------------------------------------------
 option(NACAD_BUILD_VIEWER "Build the NACad viewer (GLFW/OpenGL/ImGui/assimp)" ON)
 option(NACAD_BUILD_TESTS "Build the unit tests (doctest + CTest)" ON)
-option(NACAD_COVERAGE "Build nacad_geom and its tests with coverage instrumentation (GCC/Clang)" OFF)
-option(NACAD_SANITIZE "Build nacad_geom and its tests with ASan + UBSan (GCC/Clang)" OFF)
+option(NACAD_COVERAGE "Build the GL-free libraries and their tests with coverage instrumentation (GCC/Clang)" OFF)
+option(NACAD_SANITIZE "Build the GL-free libraries and their tests with ASan + UBSan (GCC/Clang)" OFF)
 
 # -----------------------------------------------------------
 # Compiler and build options
@@ -81,6 +81,14 @@ if(NACAD_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 endif()
 
+# --- GLM (used by nacad_viewer_core, so tests-only builds need it too) ---
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 1.0.1
+)
+FetchContent_MakeAvailable(glm)
+
 # -----------------------------------------------------------
 # Geometry library (GL-free) + its tests
 # -----------------------------------------------------------
@@ -108,14 +116,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
-# --- GLM ---
-FetchContent_Declare(
-    glm
-    GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.1
-)
-FetchContent_MakeAvailable(glm)
-
 # --- ASSIMP ---
 FetchContent_Declare(
     assimp
@@ -127,7 +127,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(assimp)
 
-# --- stb (header-only) --- stb_image.cpp is in src folder
+# --- stb (header-only) --- stb_image.cpp is in viewer/app/
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
@@ -170,72 +170,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nfd)
 
-# -----------------------------------------------------------
-# Project sources
-# -----------------------------------------------------------
-file(GLOB_RECURSE SRC_FILES
-    src/*.cpp
-    src/*.c
-)
-
-add_executable(${PROJECT_NAME} ${SRC_FILES})
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${stb_SOURCE_DIR}
-    ${nfd_SOURCE_DIR}/include
-)
-
-# -----------------------------------------------------------
-# Link everything
-# -----------------------------------------------------------
-target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-    glad
-    glfw
-    assimp
-    glm
-    imgui
-    nfd
-    ${OPENGL_LIBRARIES}
-    nacad_geom
-    nacad_options
-)
-
-if(UNIX)
-    target_link_libraries(${PROJECT_NAME} PRIVATE dl pthread)
-endif()
-
-# -----------------------------------------------------------
-# Copy shaders, samples, and shared libs
-# -----------------------------------------------------------
-set(SHADER_DIR ${CMAKE_SOURCE_DIR}/shaders)
-set(SAMPLES_DIR ${CMAKE_SOURCE_DIR}/samples)
-set(DEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SHADER_DIR} ${DEST_DIR}/shaders
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SAMPLES_DIR} ${DEST_DIR}/samples
-    COMMENT "Copying shaders and samples..."
-)
-
-# --- Copy shared libraries (DLL/.so) to build dir ---
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying shared libraries..."
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${DEST_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:assimp>
-    $<TARGET_FILE:glfw>
-    ${DEST_DIR}
-    VERBATIM
-)
-
-# -----------------------------------------------------------
-# Message
-# -----------------------------------------------------------
 message(STATUS "All dependencies fetched, built as shared libs, and linked successfully!")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "ImGui source directory: ${imgui_SOURCE_DIR}")
 
 endif() # NACAD_BUILD_VIEWER
+
+# -----------------------------------------------------------
+# Viewer: GL-free core library + its tests, and (with NACAD_BUILD_VIEWER) the NACad executable
+# -----------------------------------------------------------
+add_subdirectory(viewer)

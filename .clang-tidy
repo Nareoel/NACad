@@ -2,8 +2,8 @@
 # CamelCase = LikeThis, camelBack = likeThis.
 Checks: '-*,readability-identifier-naming'
 WarningsAsErrors: ''
-# Only report problems in our own code (src/ and geom/), never in third-party headers.
-HeaderFilterRegex: '(^|/)(src|geom)/'
+# Only report problems in our own code (viewer/ and geom/), never in third-party headers.
+HeaderFilterRegex: '(^|/)(viewer|geom)/'
 ExcludeHeaderFilterRegex: '(^|/)(externals|_deps)/'
 FormatStyle: file
 CheckOptions:

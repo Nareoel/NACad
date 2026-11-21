@@ -2,8 +2,9 @@
 # Shared compile options for NACad targets
 # -----------------------------------------------------------
 # nacad_options     : warnings, linked by every NACad target (viewer, geom, tests).
-# nacad_dev_options : coverage and sanitizers, linked only by nacad_geom and its tests
-#                     (GL drivers produce too much ASan noise for the viewer).
+# nacad_dev_options : coverage and sanitizers, linked only by the GL-free libraries (nacad_geom,
+#                     nacad_viewer_core) and their tests (GL drivers produce too much ASan noise
+#                     for the viewer executable).
 
 set(NACAD_GCC_OR_CLANG "$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>")
 
@@ -44,6 +45,7 @@ if(NACAD_COVERAGE)
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
             COMMAND ${GCOVR} -r ${CMAKE_SOURCE_DIR} --object-directory ${CMAKE_BINARY_DIR}
                     --filter ${CMAKE_SOURCE_DIR}/geom/geom/
+                    --filter ${CMAKE_SOURCE_DIR}/viewer/core/
                     --html-details ${CMAKE_BINARY_DIR}/coverage/index.html --print-summary
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             COMMENT "Running tests and generating coverage report in ${CMAKE_BINARY_DIR}/coverage"

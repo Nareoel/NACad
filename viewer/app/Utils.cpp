@@ -1,10 +1,13 @@
 #include "Utils.h"
-#include "ShaderProgram.h"
 
 #include <glad/glad.h>
+#include <stb_image.h>
+#include <stb_image_resize2.h>
+#include <algorithm>
 #include <iostream>
-#include <vector>
+#include <optional>
 #include <ranges>
+#include <vector>
 
 namespace {
 struct ImageData {
@@ -35,7 +38,7 @@ std::optional<ImageData> sLoadImage(const std::filesystem::path& path) {
 
 }  // namespace
 
-namespace Utils {
+namespace Viewer::Utils {
 
 TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::path>& uniqueImagesPaths) {
     if (uniqueImagesPaths.empty()) {
@@ -70,15 +73,15 @@ TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::pa
     }
 
     TextureInfo textureInfo;
-    // allocate GPU storage
-    GLenum format;
-    if (baseChannels == 1)
+    GLenum format{GL_RGBA};
+    if (baseChannels == 1) {
         format = GL_RED;
-    else if (baseChannels == 3)
+    } else if (baseChannels == 2) {
+        format = GL_RG;
+    } else if (baseChannels == 3) {
         format = GL_RGB;
-    else if (baseChannels == 4)
-        format = GL_RGBA;
-    GLuint texArray;
+    }
+    GLuint texArray{0};
     glGenTextures(1, &texArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, format, baseWidth, baseHeight,
@@ -127,4 +130,4 @@ TextureInfo createTextureFromImages(const std::unordered_set<std::filesystem::pa
     return textureInfo;
 }
 
-}  // namespace Utils
+}  // namespace Viewer::Utils

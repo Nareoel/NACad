@@ -1,6 +1,6 @@
 #include "RenderMesh.h"
+#include "GlApi.h"
 
-#include <glad/glad.h>
 #include <cstddef>
 #include <utility>
 

@@ -4,7 +4,9 @@
 # nacad_options     : warnings, linked by every NACad target (viewer, geom, tests).
 # nacad_dev_options : coverage and sanitizers, linked only by the GL-free libraries (nacad_geom,
 #                     nacad_viewer_core) and their tests (GL drivers produce too much ASan noise
-#                     for the viewer executable).
+#                     for the viewer executable). Native builds only.
+# nacad_test_options: linked by the test executables; empty on native builds, makes them runnable
+#                     under Node in Emscripten builds.
 
 set(NACAD_GCC_OR_CLANG "$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>")
 
@@ -17,6 +19,17 @@ target_compile_options(nacad_options INTERFACE
 
 # --- Coverage and sanitizers ---
 add_library(nacad_dev_options INTERFACE)
+
+if(EMSCRIPTEN)
+    if(NACAD_COVERAGE)
+        message(WARNING "NACAD_COVERAGE is not supported in Emscripten builds, ignoring it")
+        set(NACAD_COVERAGE OFF)
+    endif()
+    if(NACAD_SANITIZE)
+        message(WARNING "NACAD_SANITIZE is not supported in Emscripten builds, ignoring it")
+        set(NACAD_SANITIZE OFF)
+    endif()
+endif()
 
 if(NACAD_COVERAGE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -34,6 +47,17 @@ if(NACAD_SANITIZE)
     else()
         message(WARNING "NACAD_SANITIZE is only supported with GCC/Clang, ignoring it")
     endif()
+endif()
+
+# --- Test executables ---
+add_library(nacad_test_options INTERFACE)
+if(EMSCRIPTEN)
+    # colour codes would end up in the test names doctest_discover_tests reads from Node's output
+    target_compile_definitions(nacad_test_options INTERFACE DOCTEST_CONFIG_COLORS_NONE)
+    # doctest's TEST_CASE expands to __COUNTER__ in our files, which emcc's newer Clang flags under -Wpedantic
+    target_compile_options(nacad_test_options INTERFACE -Wno-c2y-extensions)
+    # EXIT_RUNTIME makes Node exit with main's return value, so failing tests fail in CTest
+    target_link_options(nacad_test_options INTERFACE -sEXIT_RUNTIME=1 -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
 endif()
 
 # --- Coverage report (gcovr) ---

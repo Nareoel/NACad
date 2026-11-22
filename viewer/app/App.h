@@ -8,7 +8,9 @@
 
 #include "core/Camera.h"
 #include "core/MouseLook.h"
+#ifndef __EMSCRIPTEN__
 #include "Model.h"
+#endif
 #include "RenderMesh.h"
 #include "ShaderProgram.h"
 
@@ -33,6 +35,9 @@ class App {
     void onKey(int key, int action);
     void onMouseMove(double xPos, double yPos);
     void onScroll(double yOffset);
+
+    // interactive mode frees the cursor for ImGui; otherwise the mouse looks around
+    void setInteractiveMode(bool interactive);
 
    private:
     GLFWwindow* window_{nullptr};
@@ -61,8 +66,10 @@ class App {
     Material lightSourceMaterial_;
     std::optional<ShaderProgram> shaderProgram_;
     std::unique_ptr<RenderMesh> cubeMesh_;
+#ifndef __EMSCRIPTEN__
     std::optional<Model> backpackModel_;
     std::optional<Model> spiderModel_;
+#endif
 
     bool initWindow_();
     bool initScene_();

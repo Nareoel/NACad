@@ -1,11 +1,11 @@
 #include "App.h"
 #include "core/AssetPaths.h"
 #include "core/Projection.h"
+#include "GlApi.h"
 #include "Utils.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
@@ -21,7 +21,10 @@
 #include <system_error>
 #include <unordered_set>
 
-#if defined(_WIN32)
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#elif defined(_WIN32)
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -39,6 +42,15 @@ const glm::vec3 cDefaultGlobalLightColor{1.0f, 0.925f, 0.5568f};
 // point light is the same color as global because light cubes shares one shader
 const glm::vec3 cDefaultPointLightColor{cDefaultGlobalLightColor};
 const glm::vec3 cDefaultSpotLightColor{1.0f, 1.0f, 1.0f};
+
+#ifdef __EMSCRIPTEN__
+constexpr const char* cImGuiGlslVersion{"#version 300 es"};
+// pointer lock needs a user gesture, so the page starts with a free cursor
+constexpr bool cStartInteractive{true};
+#else
+constexpr const char* cImGuiGlslVersion{"#version 330"};
+constexpr bool cStartInteractive{false};
+#endif
 
 // empty if the platform can't tell; findAssetRoot then falls back to the CWD
 std::filesystem::path sExecutablePath() {
@@ -94,6 +106,22 @@ void sScrollCallback(GLFWwindow* window, double /*xOffset*/, double yOffset) {
     sApp(window)->onScroll(yOffset);
 }
 
+#ifdef __EMSCRIPTEN__
+// the browser releases the pointer lock on its own (Esc), so go back to interactive mode when it does
+bool sPointerLockChangeCallback(int /*eventType*/, const EmscriptenPointerlockChangeEvent* event,
+                                void* userData) {
+    if (!event->isActive) {
+        static_cast<Viewer::App*>(userData)->setInteractiveMode(true);
+    }
+    return false;
+}
+
+bool sPointerLockErrorCallback(int /*eventType*/, const void* /*reserved*/, void* userData) {
+    static_cast<Viewer::App*>(userData)->setInteractiveMode(true);
+    return false;
+}
+#endif
+
 }  // namespace
 
 namespace Viewer {
@@ -117,10 +145,17 @@ bool App::init() {
     }
 
     glEnable(GL_DEPTH_TEST);
+    interactiveMode_ = cStartInteractive;
     applyCursorMode_();
     glfwSetCursorPosCallback(window_, sMouseCallback);
     glfwSetScrollCallback(window_, sScrollCallback);
     glfwSetKeyCallback(window_, sKeyCallback);
+#ifdef __EMSCRIPTEN__
+    emscripten_set_pointerlockchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, false,
+                                              sPointerLockChangeCallback);
+    emscripten_set_pointerlockerror_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, false,
+                                             sPointerLockErrorCallback);
+#endif
     // after our callbacks: the ImGui backend chains to the callbacks installed before it
     initImGui_();
     return true;
@@ -130,9 +165,14 @@ void App::run() {
     if (window_ == nullptr || !shaderProgram_) {
         return;
     }
+#ifdef __EMSCRIPTEN__
+    // the browser drives the frames; with simulate_infinite_loop this call does not return
+    emscripten_set_main_loop_arg([](void* app) { static_cast<App*>(app)->frame_(); }, this, 0, true);
+#else
     while (!glfwWindowShouldClose(window_)) {
         frame_();
     }
+#endif
 }
 
 void App::shutdown() {
@@ -170,11 +210,15 @@ void App::onKey(int key, int action) {
         spotLightOn_ = !spotLightOn_;
     }
     if (key == GLFW_KEY_I) {
-        interactiveMode_ = !interactiveMode_;
-        // the cursor moves freely in interactive mode, so its last position is stale after the switch
-        mouseLook_.reset();
-        applyCursorMode_();
+        setInteractiveMode(!interactiveMode_);
     }
+}
+
+void App::setInteractiveMode(bool interactive) {
+    interactiveMode_ = interactive;
+    // the cursor moves freely in interactive mode, so its last position is stale after the switch
+    mouseLook_.reset();
+    applyCursorMode_();
 }
 
 void App::onMouseMove(double xPos, double yPos) {
@@ -193,21 +237,29 @@ void App::applyCursorMode_() {
 }
 
 bool App::initWindow_() {
+#ifndef __EMSCRIPTEN__
     // NACAD_GLFW_PLATFORM=x11 forces X11 (XWayland) on a Wayland session, e.g. to compare resize behaviour
     if (const char* platform = std::getenv("NACAD_GLFW_PLATFORM");
         platform != nullptr && std::string_view(platform) == "x11") {
         glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
     }
+#endif
     if (!glfwInit()) {
         std::cout << "Failed to initialize GLFW" << std::endl;
         return false;
     }
     glfwInitialized_ = true;
+#ifdef __EMSCRIPTEN__
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+#else
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#endif
 
-    window_ = glfwCreateWindow(cWindowWidth, cWindowHeight, "LearnOpenGL", nullptr, nullptr);
+    window_ = glfwCreateWindow(cWindowWidth, cWindowHeight, "NACad", nullptr, nullptr);
     if (window_ == nullptr) {
         std::cout << "Failed to create GLFW window" << std::endl;
         return false;
@@ -217,6 +269,13 @@ bool App::initWindow_() {
     glfwMakeContextCurrent(window_);
     glfwGetFramebufferSize(window_, &framebufferWidth_, &framebufferHeight_);
 
+#ifdef __EMSCRIPTEN__
+    GLint maxFragmentUniformVectors{0};
+    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &maxFragmentUniformVectors);
+    std::cout << "OpenGL renderer: " << reinterpret_cast<const char*>(glGetString(GL_RENDERER)) << '\n'
+              << "OpenGL version: " << reinterpret_cast<const char*>(glGetString(GL_VERSION)) << '\n'
+              << "Max fragment uniform vectors: " << maxFragmentUniformVectors << std::endl;
+#else
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return false;
@@ -224,6 +283,7 @@ bool App::initWindow_() {
     std::cout << "OpenGL renderer: " << reinterpret_cast<const char*>(glGetString(GL_RENDERER)) << '\n'
               << "GLFW platform: " << (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND ? "Wayland" : "X11")
               << std::endl;
+#endif
     return true;
 }
 
@@ -246,14 +306,16 @@ bool App::initScene_() {
         auto containerTextureInfo =
             Utils::createTextureFromImages({diffuseImage, specularImage, emissionImage});
         containerTextureId_ = containerTextureInfo.first;
-        TextureData textureData;
-        textureData.id = containerTextureInfo.first;
-        textureData.textures = {
-            {TextureType::Diffuse, {containerTextureInfo.second[diffuseImage]}},
-            {TextureType::Specular, {containerTextureInfo.second[specularImage]}},
-            {TextureType::Emission, {containerTextureInfo.second[emissionImage]}},
-        };
-        containerMaterial_.textureData = std::move(textureData);
+        if (containerTextureId_ != 0) {
+            TextureData textureData;
+            textureData.id = containerTextureInfo.first;
+            textureData.textures = {
+                {TextureType::Diffuse, {containerTextureInfo.second[diffuseImage]}},
+                {TextureType::Specular, {containerTextureInfo.second[specularImage]}},
+                {TextureType::Emission, {containerTextureInfo.second[emissionImage]}},
+            };
+            containerMaterial_.textureData = std::move(textureData);
+        }
         containerMaterial_.color = glm::vec3(0, 0, 0);
         containerMaterial_.shininess = 1024;
     }
@@ -266,17 +328,21 @@ bool App::initScene_() {
     }
     cubeMesh_ = createCubeRenderMesh(Material());
 
+#ifndef __EMSCRIPTEN__
     backpackModel_.emplace(assetRoot_ / "samples" / "backpack" / "backpack.obj");
 
     spiderModel_.emplace(assetRoot_ / "samples" / "spider" / "Only_Spider_with_Animations_Export.obj");
     spiderModel_->setModelTr(
         glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, -2.0f, 0.0f)), glm::vec3(0.02f)));
+#endif
     return true;
 }
 
 void App::destroyScene_() {
+#ifndef __EMSCRIPTEN__
     spiderModel_.reset();
     backpackModel_.reset();
+#endif
     cubeMesh_.reset();
     shaderProgram_.reset();
     containerMaterial_.textureData.reset();
@@ -294,7 +360,10 @@ void App::initImGui_() {
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window_, "#canvas");
+#endif
+    ImGui_ImplOpenGL3_Init(cImGuiGlslVersion);
     imGuiInitialized_ = true;
 }
 
@@ -417,8 +486,10 @@ void App::drawScene_() {
     cubeMesh_->resetLocalTr();
     cubeMesh_->resetModelTr();
 
+#ifndef __EMSCRIPTEN__
     backpackModel_->draw(shader);
     spiderModel_->draw(shader);
+#endif
 }
 
 }  // namespace Viewer

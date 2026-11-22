@@ -1,7 +1,7 @@
 #include "Model.h"
 #include "Utils.h"
+#include "GlApi.h"
 
-#include <glad/glad.h>
 #include <iostream>
 #include <ranges>
 #include <unordered_set>

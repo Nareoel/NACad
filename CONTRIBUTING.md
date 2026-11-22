@@ -58,8 +58,12 @@ pass. The build and test commands are in [AGENTS.md](AGENTS.md#tests).
 - **Coverage:** `NACAD_COVERAGE=ON` + the `coverage` target (needs `gcovr`). Target: at least 90% line
   coverage for `nacad_geom` and `nacad_viewer_core`, and any uncovered code is justified.
 - **Sanitizers:** run the tests with `NACAD_SANITIZE=ON` (ASan + UBSan) before calling a change done.
+- **Web:** the tests must also pass under Node in the Emscripten build (`build/Web`, see
+  [AGENTS.md](AGENTS.md#web-build-emscripten)).
 - **Viewer:** GL calls aren't unit-tested. Keep logic (camera math, picking, selection, tool state)
   free of GL calls in `viewer/core/` so it can be tested, and check rendering by running the viewer.
+  Viewer code gets GL from `viewer/app/GlApi.h`, never from `<glad/glad.h>` directly, so it builds for
+  both the desktop and the web.
 
 ## Secrets and personal data
 

@@ -27,6 +27,7 @@ if(NACAD_BUILD_TESTS)
         doctest::doctest
         nacad_options
         nacad_dev_options
+        nacad_test_options
     )
     doctest_discover_tests(nacad_geom_tests)
 

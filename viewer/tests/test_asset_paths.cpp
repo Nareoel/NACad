@@ -43,3 +43,7 @@ TEST_CASE("asset root handles an unknown executable path") {
     CHECK(Viewer::findAssetRoot("NACad", "/work", hasAssets) == path("/work"));
     CHECK(calls == 2);  // empty candidates are skipped, only the CWD is checked
 }
+
+TEST_CASE("asset root is the CWD root when the executable path is unknown (web)") {
+    CHECK(Viewer::findAssetRoot(path{}, "/", sAssetsIn({"/"})) == path("/"));
+}

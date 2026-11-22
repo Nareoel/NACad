@@ -15,6 +15,13 @@ option(NACAD_SANITIZE "Build the GL-free libraries and their tests with ASan + U
 # Compiler and build options
 # -----------------------------------------------------------
 set(BUILD_SHARED_LIBS ON)
+if(EMSCRIPTEN)
+    # wasm has no shared libraries to copy next to the page
+    set(BUILD_SHARED_LIBS OFF)
+    # without it Emscripten aborts on any throw (doctest's REQUIRE throws)
+    add_compile_options(-fexceptions)
+    add_link_options(-fexceptions)
+endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -100,32 +107,41 @@ if(NACAD_BUILD_VIEWER)
 # Viewer dependencies
 # -----------------------------------------------------------
 
-# --- GLAD ---
-FetchContent_Declare(
-    glad
-    GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-    GIT_TAG v0.1.36
-)
-FetchContent_MakeAvailable(glad)
+if(EMSCRIPTEN)
+    # --- GLFW (Emscripten's contrib.glfw3 port; WebGL2 replaces glad, no assimp or nfd yet) ---
+    # the port flag must reach the compile step too: imgui_impl_glfw.cpp checks
+    # EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3, which the flag defines
+    add_library(glfw INTERFACE)
+    target_compile_options(glfw INTERFACE --use-port=contrib.glfw3)
+    target_link_options(glfw INTERFACE --use-port=contrib.glfw3)
+else()
+    # --- GLAD ---
+    FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+        GIT_TAG v0.1.36
+    )
+    FetchContent_MakeAvailable(glad)
 
-# --- GLFW ---
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.4
-)
-FetchContent_MakeAvailable(glfw)
+    # --- GLFW ---
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 3.4
+    )
+    FetchContent_MakeAvailable(glfw)
 
-# --- ASSIMP ---
-FetchContent_Declare(
-    assimp
-    GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG v5.3.1
-)
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
-set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(assimp)
+    # --- ASSIMP ---
+    FetchContent_Declare(
+        assimp
+        GIT_REPOSITORY https://github.com/assimp/assimp.git
+        GIT_TAG v5.3.1
+    )
+    set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+    set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(assimp)
+endif()
 
 # --- stb (header-only) --- stb_image.cpp is in viewer/app/
 FetchContent_Declare(
@@ -158,19 +174,28 @@ target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}/backends
 )
 
-find_package(OpenGL REQUIRED)
+if(EMSCRIPTEN)
+    # the OpenGL3 backend would pick GLSL ES 1.00 (WebGL1) on Emscripten otherwise
+    target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_ES3)
+    target_link_libraries(imgui PUBLIC glfw)
+else()
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(imgui PUBLIC glfw ${OPENGL_LIBRARIES})
 
-target_link_libraries(imgui PUBLIC glfw ${OPENGL_LIBRARIES})
+    # --- native file dialog extended ---
+    FetchContent_Declare(
+        nfd
+        GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+        GIT_TAG v1.2.1
+    )
+    FetchContent_MakeAvailable(nfd)
+endif()
 
-# --- native file dialog extended ---
-FetchContent_Declare(
-    nfd
-    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
-    GIT_TAG v1.2.1
-)
-FetchContent_MakeAvailable(nfd)
-
-message(STATUS "All dependencies fetched, built as shared libs, and linked successfully!")
+if(BUILD_SHARED_LIBS)
+    message(STATUS "All dependencies fetched, built as shared libs, and linked successfully!")
+else()
+    message(STATUS "All dependencies fetched, built as static libs, and linked successfully!")
+endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "ImGui source directory: ${imgui_SOURCE_DIR}")
 

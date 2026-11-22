@@ -1,6 +1,7 @@
 #include "ShaderProgram.h"
+#include "GlApi.h"
+#include "core/ShaderSource.h"
 
-#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <filesystem>
@@ -12,6 +13,12 @@
 #include <vector>
 
 namespace {
+#ifdef __EMSCRIPTEN__
+constexpr auto cShaderDialect{Viewer::ShaderDialect::GlslEs300};
+#else
+constexpr auto cShaderDialect{Viewer::ShaderDialect::Glsl330Core};
+#endif
+
 std::string sGetFileContent(const std::filesystem::path& filePath) {
     std::ifstream fileStream(filePath);
     std::stringstream buffer;
@@ -25,8 +32,9 @@ std::optional<unsigned int> sCreateAndCompileShader(const std::string& shaderSrc
         return {};
     }
 
+    const auto preparedSrc = Viewer::prepareShaderSource(shaderSrc, cShaderDialect);
     auto shaderId = glCreateShader(isVertexShader ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER);
-    auto shaderSrcPointer = shaderSrc.c_str();
+    auto shaderSrcPointer = preparedSrc.c_str();
     glShaderSource(shaderId, 1, &(shaderSrcPointer), NULL);
     glCompileShader(shaderId);
 

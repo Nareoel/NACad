@@ -1,11 +1,15 @@
 #include "Model.h"
 #include "Utils.h"
+#include "GlApi.h"
 
 #include <iostream>
 #include <ranges>
 #include <unordered_set>
 
 namespace {
+using Viewer::Model;
+using Viewer::TextureType;
+
 const glm::vec3 cDefaultColor(1.0f, 0.925f, 0.5568f);
 const std::unordered_map<aiTextureType, TextureType> cAiTextureTypeToOurTextureType{
     {aiTextureType_DIFFUSE, TextureType::Diffuse},
@@ -24,13 +28,41 @@ Model::ImagesInfo sLoadImagesInfoFromAssimpMaterial(aiMaterial* material, const 
         }
     }
     return result;
-};
+}
 
 }  // namespace
 
+namespace Viewer {
+
 Model::Model(const std::filesystem::path& filePath) { loadModel(filePath); }
 
+Model::Model(Model&& other) noexcept
+    : directory_{std::move(other.directory_)},
+      meshesAndImagesInfo_{std::move(other.meshesAndImagesInfo_)},
+      textureId_{std::exchange(other.textureId_, 0)} {}
+
+Model& Model::operator=(Model&& other) noexcept {
+    if (this != &other) {
+        release_();
+        directory_ = std::move(other.directory_);
+        meshesAndImagesInfo_ = std::move(other.meshesAndImagesInfo_);
+        textureId_ = std::exchange(other.textureId_, 0);
+    }
+    return *this;
+}
+
+Model::~Model() { release_(); }
+
+void Model::release_() {
+    meshesAndImagesInfo_.clear();
+    if (textureId_ != 0) {
+        glDeleteTextures(1, &textureId_);
+        textureId_ = 0;
+    }
+}
+
 void Model::loadModel(const std::filesystem::path& filePath) {
+    release_();
     std::cout << "Reading model file: " << filePath << std::endl;
     Assimp::Importer importer;
     const auto* scene = importer.ReadFile(filePath.string(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -68,7 +100,7 @@ void Model::processNode_(aiNode* node, const aiScene* scene) {
 
 void Model::loadFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
     std::vector<Vertex> vertices;
-    std::vector<int> indices;
+    std::vector<unsigned int> indices;
 
     vertices.reserve(mesh->mNumVertices);
     for (size_t i = 0; i < mesh->mNumVertices; ++i) {
@@ -90,7 +122,7 @@ void Model::loadFromAiMesh_(aiMesh* mesh, const aiScene* scene) {
         }
     }
 
-    auto ourMesh = std::make_unique<Mesh>(vertices, indices, Material{});
+    auto ourMesh = std::make_unique<RenderMesh>(vertices, indices, Material{});
 
     ImagesInfo images;
     if (mesh->mMaterialIndex < scene->mNumMaterials) {
@@ -105,6 +137,7 @@ void Model::createTexturesAndSetMaterial_() {
         uniqueImages.insert(images.second);
     }
     const auto [textureId, textureLayersMap] = Utils::createTextureFromImages(uniqueImages);
+    textureId_ = textureId;
 
     for (auto& [mesh, imagesInfo] : meshesAndImagesInfo_) {
         Material material;
@@ -124,3 +157,5 @@ void Model::createTexturesAndSetMaterial_() {
         mesh->setMaterial(material);
     }
 }
+
+}  // namespace Viewer

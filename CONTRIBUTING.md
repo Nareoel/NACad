@@ -36,6 +36,35 @@ When a PR is merged, the merge (or squash) commit message contains only the subj
 PR: https://github.com/Nareoel/NACad/pull/<number>
 ```
 
+## Tests
+
+**All functionality is covered by unit tests.** A feature or fix is only done when its tests exist and
+pass. The build and test commands are in [AGENTS.md](AGENTS.md#tests).
+
+- Framework: **doctest**, registered with **CTest**. Each `TEST_CASE` is its own CTest test.
+- Layout: `geom/tests/test_<module>.cpp` for the geometry library and `viewer/tests/test_<module>.cpp`
+  for the GL-free viewer core (`viewer/core/`), mirroring the library modules. Add every new test file
+  to the source list in `geom/CMakeLists.txt` or `viewer/CMakeLists.txt`.
+- **Self-contained test data.** Build meshes in code (tetrahedron, cube, icosphere, open grid,
+  deliberately broken cases) or embed small files as strings. Tests never depend on the gitignored
+  `samples/`.
+- What to test:
+  - exact results on tiny inputs where the answer can be computed by hand;
+  - invariants (for example half-edge consistency, Euler characteristic, Laplacian row sums = 0);
+  - failure and edge cases: empty input, malformed files, degenerate or non-manifold geometry,
+    boundaries;
+  - floating-point values with `doctest::Approx` and explicit tolerances;
+  - a regression test for every bug fixed.
+- **Coverage:** `NACAD_COVERAGE=ON` + the `coverage` target (needs `gcovr`). Target: at least 90% line
+  coverage for `nacad_geom` and `nacad_viewer_core`, and any uncovered code is justified.
+- **Sanitizers:** run the tests with `NACAD_SANITIZE=ON` (ASan + UBSan) before calling a change done.
+- **Web:** the tests must also pass under Node in the Emscripten build (`build/Web`, see
+  [AGENTS.md](AGENTS.md#web-build-emscripten)).
+- **Viewer:** GL calls aren't unit-tested. Keep logic (camera math, picking, selection, tool state)
+  free of GL calls in `viewer/core/` so it can be tested, and check rendering by running the viewer.
+  Viewer code gets GL from `viewer/app/GlApi.h`, never from `<glad/glad.h>` directly, so it builds for
+  both the desktop and the web.
+
 ## Secrets and personal data
 
 - Never commit credentials, tokens, API keys, private keys, `.env` files or personal data (emails,

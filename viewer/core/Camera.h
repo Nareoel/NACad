@@ -1,8 +1,8 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+
+namespace Viewer {
 
 class Camera {
    public:
@@ -10,9 +10,12 @@ class Camera {
     Camera();
 
     float fieldOfView() const;
+    double yaw() const;
+    double pitch() const;
     glm::mat4 viewMatrix() const;
     const glm::vec3& position() const;
     const glm::vec3& front() const;
+    const glm::vec3& up() const;
     void processKeyboard(MovementType movement, double deltaTime);
     void processMouse(double xOffset, double yOffset);
     void processScroll(double yOffset);
@@ -26,10 +29,9 @@ class Camera {
     double yaw_{-90.0};
     double pitch_{0.0};
     double fieldOfView_{45.0};
-    // the following values may be constants in an unnamed namespace
-    const double mouseSensitivity_{0.1};
-    const double movementSpeed_{2.5};
 
     void update_();
     void swap_(Camera& other);
 };
+
+}  // namespace Viewer

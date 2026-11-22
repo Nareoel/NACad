@@ -1,15 +1,31 @@
-#include "Camera.h"
+#include "core/Camera.h"
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <utility>
 
-namespace {}  // namespace
+namespace {
+constexpr double cMouseSensitivity{0.1};
+constexpr double cMovementSpeed{2.5};
+constexpr double cPitchLimit{89.0};
+constexpr double cMinFieldOfView{1.0};
+constexpr double cMaxFieldOfView{45.0};
+}  // namespace
+
+namespace Viewer {
+
 Camera::Camera() { update_(); }
-float Camera::fieldOfView() const { return fieldOfView_; }
+float Camera::fieldOfView() const { return static_cast<float>(fieldOfView_); }
+double Camera::yaw() const { return yaw_; }
+double Camera::pitch() const { return pitch_; }
 glm::mat4 Camera::viewMatrix() const { return glm::lookAt(position_, position_ + front_, up_); }
 const glm::vec3& Camera::position() const { return position_; }
 const glm::vec3& Camera::front() const { return front_; }
+const glm::vec3& Camera::up() const { return up_; }
 void Camera::processKeyboard(MovementType movement, double deltaTime) {
-    float velocity = movementSpeed_ * deltaTime;
+    const auto velocity = static_cast<float>(cMovementSpeed * deltaTime);
     switch (movement) {
         case Camera::MovementType::Backward:
             position_ -= velocity * front_;
@@ -36,24 +52,14 @@ void Camera::processKeyboard(MovementType movement, double deltaTime) {
     update_();
 }
 void Camera::processMouse(double xOffset, double yOffset) {
-    constexpr float cSensitivity = 0.1f;
-    xOffset *= cSensitivity;
-    yOffset *= cSensitivity;
-
-    yaw_ += xOffset;
-    pitch_ += yOffset;
-
-    double pitchUpperConstrain{89.0f};
-    double pitchLowerConstrain{-89.0f};
-    pitch_ = std::clamp(pitch_, pitchLowerConstrain, pitchUpperConstrain);
-
+    yaw_ += xOffset * cMouseSensitivity;
+    pitch_ += yOffset * cMouseSensitivity;
+    pitch_ = std::clamp(pitch_, -cPitchLimit, cPitchLimit);
     update_();
 }
 void Camera::processScroll(double yOffset) {
-    fieldOfView_ -= static_cast<float>(yOffset);
-    constexpr double cFovUpperConstraint{45.0f};
-    constexpr double cFovLowerConstraint{1.0f};
-    fieldOfView_ = std::clamp(fieldOfView_, cFovLowerConstraint, cFovUpperConstraint);
+    fieldOfView_ -= yOffset;
+    fieldOfView_ = std::clamp(fieldOfView_, cMinFieldOfView, cMaxFieldOfView);
     update_();
 }
 void Camera::resetView() {
@@ -61,12 +67,11 @@ void Camera::resetView() {
     swap_(camera);
 }
 void Camera::update_() {
-    front_.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-    front_.y = sin(glm::radians(pitch_));
-    front_.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-    front_ = glm::normalize(front_);
-    // also re-calculate the Right and Up vector
-    auto right = glm::normalize(glm::cross(front_, worldUp_));
+    const auto yaw = glm::radians(yaw_);
+    const auto pitch = glm::radians(pitch_);
+    front_ = glm::normalize(
+        glm::vec3(std::cos(yaw) * std::cos(pitch), std::sin(pitch), std::sin(yaw) * std::cos(pitch)));
+    const auto right = glm::normalize(glm::cross(front_, worldUp_));
     up_ = glm::normalize(glm::cross(right, front_));
 }
 void Camera::swap_(Camera& other) {
@@ -77,3 +82,5 @@ void Camera::swap_(Camera& other) {
     std::swap(pitch_, other.pitch_);
     std::swap(fieldOfView_, other.fieldOfView_);
 }
+
+}  // namespace Viewer

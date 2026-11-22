@@ -1,24 +1,28 @@
 #include "ShaderProgram.h"
+#include "GlApi.h"
+#include "core/ShaderSource.h"
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <filesystem>
-#include <string>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace {
+#ifdef __EMSCRIPTEN__
+constexpr auto cShaderDialect{Viewer::ShaderDialect::GlslEs300};
+#else
+constexpr auto cShaderDialect{Viewer::ShaderDialect::Glsl330Core};
+#endif
+
 std::string sGetFileContent(const std::filesystem::path& filePath) {
     std::ifstream fileStream(filePath);
     std::stringstream buffer;
     buffer << fileStream.rdbuf();
-    // if (!buffer.str().empty()) {
-    //     std::cout << buffer.str() << std::endl;
-    // }
     return buffer.str();
 }
 std::optional<unsigned int> sCreateAndCompileShader(const std::string& shaderSrc, bool isVertexShader) {
@@ -28,8 +32,9 @@ std::optional<unsigned int> sCreateAndCompileShader(const std::string& shaderSrc
         return {};
     }
 
+    const auto preparedSrc = Viewer::prepareShaderSource(shaderSrc, cShaderDialect);
     auto shaderId = glCreateShader(isVertexShader ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER);
-    auto shaderSrcPointer = shaderSrc.c_str();
+    auto shaderSrcPointer = preparedSrc.c_str();
     glShaderSource(shaderId, 1, &(shaderSrcPointer), NULL);
     glCompileShader(shaderId);
 
@@ -40,6 +45,7 @@ std::optional<unsigned int> sCreateAndCompileShader(const std::string& shaderSrc
         glGetShaderInfoLog(shaderId, 512, NULL, infoLog);
         std::string shaderType = isVertexShader ? "Vertex" : "Fragment";
         std::cout << "Error::Shader::" << shaderType << "::Compilation Failed\n" << infoLog << std::endl;
+        glDeleteShader(shaderId);
         return {};
     }
     return shaderId;
@@ -63,11 +69,14 @@ std::optional<unsigned int> sCreateAndLinkProgram(unsigned int vShaderId, unsign
         char infoLog[512];
         glGetProgramInfoLog(programId, 512, NULL, infoLog);
         std::cout << "Error::Program::Linkage Failed\n" << infoLog << std::endl;
+        glDeleteProgram(programId);
         return {};
     }
     return programId;
 }
 }  // namespace
+
+namespace Viewer {
 
 std::optional<ShaderProgram> ShaderProgram::createShaderProgram(const std::filesystem::path& vShaderPath,
                                                                 const std::filesystem::path& sShaderPath) {
@@ -103,6 +112,26 @@ std::optional<ShaderProgram> ShaderProgram::createShaderProgram(const std::files
 }
 
 ShaderProgram::ShaderProgram(unsigned int programId) : programId_{programId} {}
+
+ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept
+    : programId_{std::exchange(other.programId_, 0)} {}
+
+ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept {
+    if (this != &other) {
+        release_();
+        programId_ = std::exchange(other.programId_, 0);
+    }
+    return *this;
+}
+
+ShaderProgram::~ShaderProgram() { release_(); }
+
+void ShaderProgram::release_() {
+    if (programId_ != 0) {
+        glDeleteProgram(programId_);
+        programId_ = 0;
+    }
+}
 
 void ShaderProgram::use() { glUseProgram(programId_); }
 
@@ -275,3 +304,5 @@ void ShaderProgram::setUniform(const std::string& structName, const SpotLight& l
     location = glGetUniformLocation(programId_, varName.c_str());
     glUniform1f(location, light.outerCutOff);
 }
+
+}  // namespace Viewer

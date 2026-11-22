@@ -2,16 +2,19 @@
 
 #include <filesystem>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
+
+namespace Viewer {
 
 enum class TextureType { Diffuse, Specular, Emission };
 using TextureID = unsigned int;
 using TextureLayerIndex = int;
 
 struct TextureData {
-    TextureID id;
+    TextureID id{0};
     std::unordered_map<TextureType, std::vector<TextureLayerIndex>> textures;
 };
 
@@ -67,6 +70,12 @@ class ShaderProgram {
    public:
     static std::optional<ShaderProgram> createShaderProgram(const std::filesystem::path& vShaderPath,
                                                             const std::filesystem::path& sShaderPath);
+    ShaderProgram(const ShaderProgram&) = delete;
+    ShaderProgram& operator=(const ShaderProgram&) = delete;
+    ShaderProgram(ShaderProgram&& other) noexcept;
+    ShaderProgram& operator=(ShaderProgram&& other) noexcept;
+    ~ShaderProgram();
+
     void use();
     void setUniform(const std::string& varName, bool value);
     void setUniform(const std::string& varName, int value);
@@ -81,6 +90,10 @@ class ShaderProgram {
     void setUniform(const std::string& structName, const PointLight& light);
 
    private:
-    ShaderProgram(unsigned int id);
-    unsigned int programId_;
+    explicit ShaderProgram(unsigned int programId);
+    void release_();
+
+    unsigned int programId_{0};
 };
+
+}  // namespace Viewer
